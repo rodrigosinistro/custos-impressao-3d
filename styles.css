@@ -98,10 +98,43 @@ p{ margin:0; }
 }
 
 .container{
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 18px 22px 40px;
 }
+
+
+/* Expande áreas (especialmente tabelas) para usar quase toda a largura da tela */
+.full-bleed{
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+/* Colunas fixas nas tabelas (ajuda a ver ações e ID mesmo com scroll horizontal) */
+.sticky-left{
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: rgba(15,22,32,.96);
+}
+.sticky-right{
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: rgba(15,22,32,.96);
+}
+
+/* Mantém células fixas acima de linhas */
+tbody .sticky-left, tbody .sticky-right{
+  background: rgba(18,27,39,.92);
+}
+
+/* Um pouco mais compacto na tabela de Trabalhos para caber mais colunas */
+#tab-jobs .table th, #tab-jobs .table td{ padding: 8px 8px; }
+#tab-jobs .cell-input{ padding: 7px 7px; }
 
 .panel{ display:none; }
 .panel.active{ display:block; }
@@ -266,3 +299,5 @@ input:focus, select:focus{ border-color: rgba(106,167,255,.5); }
   font-size: 12px;
   text-align:center;
 }
+
+.table thead .sticky-left, .table thead .sticky-right{ z-index: 5; }

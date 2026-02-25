@@ -4,53 +4,53 @@
 const STORAGE_KEY = "custos-impressao-3d-bambulab:v1";
 
 const DEFAULTS = {
-  "version": 1,
+  "version": 2,
   "params": {
     "tarifa_energia": 0.87,
-    "custo_impressora": 4999,
-    "custo_ams": 0,
-    "vida_util_h": 2000,
-    "valor_revenda": 4500,
-    "mao_de_obra_h": 30,
-    "manutencao_h": 2,
+    "custo_impressora": 4999.0,
+    "custo_ams": 0.0,
+    "vida_util_h": 2000.0,
+    "valor_revenda": 4500.0,
+    "mao_de_obra_h": 30.0,
+    "manutencao_h": 2.0,
     "overhead_pct": 0.1,
     "lucro_pct": 0.3,
-    "energia_extra_kwh": 0,
-    "embalagem_padrao": 1,
-    "custo_total_equip": 4999,
+    "energia_extra_kwh": 0.0,
+    "embalagem_padrao": 1.0,
+    "custo_total_equip": 4999.0,
     "depreciacao_h": 0.2495
   },
   "materials": [
     {
       "material": "PLA",
       "marca": "",
-      "preco_kg": 129,
+      "preco_kg": 129.0,
       "custo_g": 0.129,
-      "potencia_w": 95,
+      "potencia_w": 95.0,
       "desperdicio_pct": 0.05
     },
     {
       "material": "PETG",
       "marca": "",
-      "preco_kg": 69,
+      "preco_kg": 69.0,
       "custo_g": 0.069,
-      "potencia_w": 200,
+      "potencia_w": 200.0,
       "desperdicio_pct": 0.07
     },
     {
       "material": "TPU",
       "marca": "",
-      "preco_kg": 230,
+      "preco_kg": 230.0,
       "custo_g": 0.23,
-      "potencia_w": 120,
+      "potencia_w": 120.0,
       "desperdicio_pct": 0.08
     },
     {
       "material": "PVA",
       "marca": "",
-      "preco_kg": 300,
+      "preco_kg": 300.0,
       "custo_g": 0.3,
-      "potencia_w": 150,
+      "potencia_w": 150.0,
       "desperdicio_pct": 0.1
     }
   ],
@@ -60,45 +60,39 @@ const DEFAULTS = {
       "data": "2026-03-03",
       "projeto": "Issac / Espada Tanjirou",
       "material": "PLA",
-      "peso_g": 125,
-      "tempo_h": 5,
-      "perda_pct": 0.05,
-      "embalagem": 1,
+      "peso_g": 125.0,
+      "tempo_h": 5.0,
       "desconto_factor": 0.8,
       "pago": "NÃO",
-      "data_entrega": "2026-03-10",
-      "data_pagamento": "2026-03-25",
-      "ativo": "SIM"
+      "incluir": true,
+      "data_entrega": "",
+      "data_pagamento": ""
     },
     {
       "id": 2,
       "data": "2026-03-03",
       "projeto": "Rodrigo / Coletor",
       "material": "PLA",
-      "peso_g": 100,
-      "tempo_h": 4,
-      "perda_pct": 0.05,
-      "embalagem": 1,
-      "desconto_factor": 1,
-      "pago": "SIM",
-      "data_entrega": "2026-03-10",
-      "data_pagamento": "2026-03-25",
-      "ativo": "NÃO"
+      "peso_g": 100.0,
+      "tempo_h": 4.0,
+      "desconto_factor": 1.0,
+      "pago": "NÃO",
+      "incluir": true,
+      "data_entrega": "",
+      "data_pagamento": ""
     },
     {
       "id": 3,
       "data": "2026-03-03",
       "projeto": "Rodrigo / Defletor",
       "material": "PLA",
-      "peso_g": 11,
+      "peso_g": 11.0,
       "tempo_h": 0.5,
-      "perda_pct": 0.05,
-      "embalagem": 1,
-      "desconto_factor": 1,
-      "pago": "SIM",
-      "data_entrega": "2026-03-10",
-      "data_pagamento": "2026-03-25",
-      "ativo": "ATRASADO"
+      "desconto_factor": 1.0,
+      "pago": "NÃO",
+      "incluir": true,
+      "data_entrega": "",
+      "data_pagamento": ""
     }
   ]
 };
@@ -171,6 +165,16 @@ function loadState() {
     // Migração leve/defensiva
     if (!parsed || typeof parsed !== "object") return deepClone(DEFAULTS);
     if (!parsed.params || !parsed.materials || !parsed.jobs) return deepClone(DEFAULTS);
+
+    // Migração v1 -> v2 (ajustes da planilha)
+    const v = Number(parsed.version || 1);
+    if (v < 2) {
+      // Se o usuário ainda está com o valor antigo/default, corrige para o valor atualizado da planilha
+      if (parsed.params && Number(parsed.params.mao_de_obra_h) === 30) {
+        parsed.params.mao_de_obra_h = 10;
+      }
+      parsed.version = 2;
+    }
 
     return parsed;
   } catch {
@@ -430,7 +434,7 @@ function renderJobs(materialMap) {
     const descontoPct = decimalToPercentInput(j.desconto_factor);
 
     tr.innerHTML = `
-      <td><span class="pill">#${j.id}</span></td>
+      <td class="sticky-left"><span class="pill">#${j.id}</span></td>
       <td><input class="cell-input" data-j="data" type="date" value="${dateISOToInput(j.data)}" /></td>
       <td><input class="cell-input" data-j="projeto" value="${escapeHtml(j.projeto)}" placeholder="Ex.: Cliente / Projeto" /></td>
       <td>
@@ -466,7 +470,7 @@ function renderJobs(materialMap) {
       <td class="num"><span class="pill">${fmtBRL(d.preco_final)}</span></td>
       <td class="num"><span class="small">${fmtBRL(d.subtotal)}</span></td>
       <td class="num"><span class="small">${fmtBRL(d.preco_sugerido)}</span></td>
-      <td class="num">
+      <td class="num sticky-right">
         <button class="btn" data-action="dup-job" title="Duplicar">Duplicar</button>
         <button class="btn danger" data-action="rm-job" title="Remover">Remover</button>
       </td>
@@ -482,7 +486,7 @@ function renderJobs(materialMap) {
     // Details
     const tr2 = document.createElement("tr");
     tr2.innerHTML = `
-      <td><span class="pill">#${j.id}</span></td>
+      <td class="sticky-left"><span class="pill">#${j.id}</span></td>
       <td class="num">${fmtBRL(d.custo_material)}</td>
       <td class="num">${fmtNum(d.energia_kwh, 3)}</td>
       <td class="num">${fmtBRL(d.custo_energia)}</td>
