@@ -326,6 +326,9 @@ function computeAll() {
     return computeJob(job, state.params, materialMap);
   });
 
+  // Mantém a mesma ordem da planilha: crescente por ID
+  state.jobs.sort((a, b) => clampNumber(a.id, 0) - clampNumber(b.id, 0));
+
   return materialMap;
 }
 
@@ -421,6 +424,8 @@ function renderJobs(materialMap) {
   const materialOptions = materials.map(m => `<option value="${escapeHtml(m.material)}">${escapeHtml(m.material)}</option>`).join("");
 
   const jobsFiltered = state.jobs
+    .slice()
+    .sort((a, b) => clampNumber(a.id, 0) - clampNumber(b.id, 0))
     .filter(j => !search || String(j.projeto || "").toLowerCase().includes(search));
 
   for (const j of jobsFiltered) {
@@ -558,7 +563,7 @@ function removeMaterial(idx) {
 
 function addJob() {
   const firstMaterial = state.materials.find(m => m.material)?.material || "";
-  state.jobs.unshift({
+  state.jobs.push({
     id: nextJobId(),
     data: todayISO(),
     projeto: "",
