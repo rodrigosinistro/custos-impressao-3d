@@ -393,9 +393,6 @@ function $(sel) { return document.querySelector(sel); }
 function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
 
 
-function $(sel) { return document.querySelector(sel); }
-function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
-
 function setTab(tabId) {
   $all(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tabId));
   $all(".panel").forEach(p => p.classList.toggle("active", p.id === `tab-${tabId}`));
