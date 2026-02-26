@@ -4,7 +4,7 @@
 const STORAGE_KEY = "custos-impressao-3d-bambulab:v1";
 
 const DEFAULTS = {
-  "version": 2,
+  "version": 3,
   "params": {
     "tarifa_energia": 0.87,
     "custo_impressora": 4999.0,
@@ -54,6 +54,7 @@ const DEFAULTS = {
       "desperdicio_pct": 0.1
     }
   ],
+  "suppliers": [],
   "jobs": [
     {
       "id": 1,
@@ -222,6 +223,14 @@ function loadState() {
       }
       parsed.version = 2;
     }
+
+    // Migração v2 -> v3 (Cadastro de fornecedores + gráfico mensal)
+    if (Number(parsed.version || 2) < 3) {
+      if (!Array.isArray(parsed.suppliers)) parsed.suppliers = [];
+      parsed.version = 3;
+    }
+
+    if (!Array.isArray(parsed.suppliers)) parsed.suppliers = [];
 
     return parsed;
   } catch {
@@ -472,6 +481,45 @@ function renderMaterials() {
   });
 }
 
+
+function renderSuppliers() {
+  const tbody = qs("#suppliersTable tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const rows = Array.isArray(state.suppliers) ? state.suppliers : [];
+  rows.forEach((s, idx) => {
+    const tr = document.createElement("tr");
+    tr.dataset.idx = String(idx);
+
+    const aval = String(s.avaliacao || "BOM").toUpperCase();
+    tr.innerHTML = `
+      <td><input class="cell-input" data-s="nome" value="${escapeHtml(s.nome || "")}" placeholder="Nome do fornecedor" /></td>
+      <td><input class="cell-input" data-s="contato" value="${escapeHtml(s.contato || "")}" placeholder="WhatsApp, e-mail…" /></td>
+      <td><input class="cell-input" data-s="link" value="${escapeHtml(s.link || "")}" placeholder="Loja / site" /></td>
+      <td><input class="cell-input" data-s="ultima_compra" type="date" value="${dateISOToInput(s.ultima_compra || "")}" /></td>
+      <td class="num"><input class="cell-input" data-s="valor_ultima_compra" type="text" inputmode="decimal" value="${fmtInputNumber(s.valor_ultima_compra || 0, 2)}" /></td>
+      <td>
+        <select class="cell-input" data-s="avaliacao">
+          <option value="EXCELENTE">EXCELENTE</option>
+          <option value="BOM">BOM</option>
+          <option value="RUIM">RUIM</option>
+        </select>
+      </td>
+      <td class="num"><input class="cell-input" data-s="prazo_dias" type="text" inputmode="decimal" value="${fmtInputNumber(s.prazo_dias || 0, 0)}" /></td>
+      <td class="num"><input class="cell-input" data-s="frete_medio" type="text" inputmode="decimal" value="${fmtInputNumber(s.frete_medio || 0, 2)}" /></td>
+      <td><input class="cell-input" data-s="obs" value="${escapeHtml(s.obs || "")}" placeholder="Ex.: bom preço, entrega rápida…" /></td>
+      <td class="num sticky-right">
+        <button class="btn danger" data-action="rm-supplier" title="Remover">Remover</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    const sel = tr.querySelector('[data-s="avaliacao"]');
+    if (sel) sel.value = (aval === "EXCELENTE" || aval === "RUIM") ? aval : "BOM";
+  });
+}
+
+
 function renderJobs(materialMap) {
   const search = (qs("#jobSearch").value || "").trim().toLowerCase();
   const tbody = qs("#jobsTable tbody");
@@ -577,7 +625,149 @@ function renderSummary() {
   qs("#sumDue").textContent = fmtBRL(s.totalDue);
   qs("#sumPaid").textContent = fmtBRL(s.totalPaid);
   qs("#sumLate").textContent = fmtBRL(s.totalLate);
+  renderSummaryChart();
 }
+
+
+function computeMonthlySeries() {
+  const rows = Array.isArray(state.jobs) ? state.jobs : [];
+  const map = new Map();
+
+  const monthKey = (iso) => {
+    if (!iso) return "";
+    // iso "YYYY-MM-DD"
+    return String(iso).slice(0, 7);
+  };
+
+  for (const j of rows) {
+    const d = j.derived || {};
+    const ref = d.data_pagamento || d.data_entrega || j.data || "";
+    const mk = monthKey(ref);
+    if (!mk) continue;
+
+    if (!map.has(mk)) map.set(mk, { mk, noLabor: 0, due: 0, received: 0 });
+    const bucket = map.get(mk);
+
+    bucket.noLabor += clampNumber(d.custo_sem_mao, 0);
+
+    if (!j.particular) {
+      const val = clampNumber(d.preco_final, 0);
+      if (String(j.pago || "").toUpperCase() === "SIM") bucket.received += val;
+      else bucket.due += val;
+    }
+  }
+
+  const months = Array.from(map.values()).sort((a, b) => a.mk.localeCompare(b.mk));
+  return months;
+}
+
+let _chartRaf = null;
+function renderSummaryChart() {
+  const canvas = qs("#summaryChart");
+  if (!canvas) return;
+
+  const data = computeMonthlySeries();
+  if (_chartRaf) cancelAnimationFrame(_chartRaf);
+  _chartRaf = requestAnimationFrame(() => drawMonthlyChart(canvas, data));
+}
+
+function drawMonthlyChart(canvas, data) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const parent = canvas.parentElement;
+  const cssW = parent ? parent.clientWidth : 800;
+  const cssH = 320;
+
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  canvas.width = Math.floor(cssW * dpr);
+  canvas.height = Math.floor(cssH * dpr);
+  canvas.style.height = cssH + "px";
+  canvas.style.width = cssW + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  // No data
+  if (!data || data.length === 0) {
+    ctx.fillStyle = "rgba(168,179,194,.8)";
+    ctx.font = "12px ui-sans-serif, system-ui";
+    ctx.fillText("Sem dados suficientes para o gráfico (adicione trabalhos com data de pagamento/entrega).", 14, 26);
+    return;
+  }
+
+  const padL = 48, padR = 18, padT = 18, padB = 44;
+  const W = cssW - padL - padR;
+  const H = cssH - padT - padB;
+
+  const maxV = Math.max(1, ...data.flatMap(d => [d.noLabor, d.due, d.received].map(x => clampNumber(x, 0))));
+  const yScale = (v) => padT + H - (clampNumber(v, 0) / maxV) * H;
+
+  // Axis
+  ctx.strokeStyle = "rgba(231,237,245,.10)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, padT + H);
+  ctx.lineTo(padL + W, padT + H);
+  ctx.stroke();
+
+  // Grid lines (4)
+  ctx.fillStyle = "rgba(168,179,194,.85)";
+  ctx.font = "11px ui-sans-serif, system-ui";
+  for (let i = 0; i <= 4; i++) {
+    const v = (maxV * i) / 4;
+    const y = yScale(v);
+    ctx.strokeStyle = "rgba(231,237,245,.07)";
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + W, y);
+    ctx.stroke();
+
+    ctx.fillText(fmtNum(v, 0), 6, y + 4);
+  }
+
+  const c1 = getComputedStyle(document.documentElement).getPropertyValue("--c1").trim() || "#6aa7ff";
+  const c2 = getComputedStyle(document.documentElement).getPropertyValue("--c2").trim() || "#f5b84b";
+  const c3 = getComputedStyle(document.documentElement).getPropertyValue("--c3").trim() || "#4dd4a7";
+
+  const n = data.length;
+  const groupW = W / n;
+  const barW = Math.max(6, Math.min(22, groupW * 0.18));
+  const gap = Math.max(2, barW * 0.25);
+
+  const label = (mk) => {
+    const [y, m] = mk.split("-");
+    return `${m}/${y}`;
+  };
+
+  for (let i = 0; i < n; i++) {
+    const x0 = padL + i * groupW + groupW / 2;
+    const d = data[i];
+
+    const bars = [
+      { v: d.noLabor, color: c1, dx: -(barW + gap) },
+      { v: d.due, color: c2, dx: 0 },
+      { v: d.received, color: c3, dx: (barW + gap) },
+    ];
+
+    for (const b of bars) {
+      const x = x0 + b.dx - barW / 2;
+      const y = yScale(b.v);
+      const h = padT + H - y;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(x, y, barW, h);
+    }
+
+    // Month label
+    ctx.fillStyle = "rgba(168,179,194,.9)";
+    ctx.font = "11px ui-sans-serif, system-ui";
+    const text = label(d.mk);
+    const tw = ctx.measureText(text).width;
+    ctx.fillText(text, x0 - tw / 2, padT + H + 28);
+  }
+}
+
 
 function escapeHtml(str) {
   return String(str ?? "")
@@ -592,6 +782,7 @@ function rerender() {
   const materialMap = computeAll();
   renderParams();
   renderMaterials();
+  renderSuppliers();
   renderJobs(materialMap);
   renderSummary();
   saveState();
@@ -600,6 +791,28 @@ function rerender() {
 function nextJobId() {
   const maxId = state.jobs.reduce((m, j) => Math.max(m, clampNumber(j.id, 0)), 0);
   return maxId + 1;
+}
+
+function addSupplier() {
+  if (!Array.isArray(state.suppliers)) state.suppliers = [];
+  state.suppliers.push({
+    nome: "",
+    contato: "",
+    link: "",
+    ultima_compra: "",
+    valor_ultima_compra: 0,
+    avaliacao: "BOM",
+    prazo_dias: 0,
+    frete_medio: 0,
+    obs: ""
+  });
+  rerender();
+}
+
+function removeSupplier(idx) {
+  if (!Array.isArray(state.suppliers)) state.suppliers = [];
+  state.suppliers.splice(idx, 1);
+  rerender();
 }
 
 function addMaterial() {
@@ -765,6 +978,49 @@ function wireEvents() {
     removeMaterial(idx);
   });
 
+  // Suppliers table (delegation)
+  const suppliersTable = qs("#suppliersTable");
+  if (suppliersTable) suppliersTable.addEventListener("change", (ev) => {
+    const target = ev.target;
+    if (!(target instanceof HTMLElement)) return;
+    const tr = target.closest("tr");
+    if (!tr) return;
+    const idx = clampNumber(tr.dataset.idx, -1);
+    if (idx < 0) return;
+
+    const key = target.getAttribute("data-s");
+    if (!key) return;
+
+    if (!Array.isArray(state.suppliers)) state.suppliers = [];
+    const s = state.suppliers[idx];
+    if (!s) return;
+
+    if (key === "nome" || key === "contato" || key === "link" || key === "obs") {
+      s[key] = target.value;
+    } else if (key === "ultima_compra") {
+      s[key] = inputToDateISO(target.value);
+    } else if (key === "avaliacao") {
+      s[key] = target.value;
+    } else {
+      s[key] = clampNumber(target.value, 0);
+    }
+
+    rerender();
+  });
+
+  if (suppliersTable) suppliersTable.addEventListener("click", (ev) => {
+    const target = ev.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.dataset.action !== "rm-supplier") return;
+    const tr = target.closest("tr");
+    if (!tr) return;
+    const idx = clampNumber(tr.dataset.idx, -1);
+    if (idx < 0) return;
+    if (!confirm("Remover este fornecedor?")) return;
+    removeSupplier(idx);
+  });
+
+
   // Jobs table (delegation)
   qs("#jobsTable").addEventListener("change", (ev) => {
     const target = ev.target;
@@ -834,7 +1090,11 @@ function wireEvents() {
     const key = target.getAttribute("data-j2");
     if (!key) return;
 
-    if (key === "data_entrega") job.data_entrega = inputToDateISO(target.value);
+    if (key === "data_entrega") {
+      job.data_entrega = inputToDateISO(target.value);
+      // Regra: ao alterar a entrega manualmente, o pagamento estimado vai automaticamente para +15 dias.
+      job.data_pagamento = job.data_entrega ? addDaysISO(job.data_entrega, 15) : "";
+    }
     if (key === "data_pagamento") job.data_pagamento = inputToDateISO(target.value);
 
     rerender();
@@ -851,6 +1111,8 @@ function wireEvents() {
     t.blur();
   };
   qs("#materialsTable").addEventListener("keydown", blurOnEnter);
+  const st = qs("#suppliersTable");
+  if (st) st.addEventListener("keydown", blurOnEnter);
   qs("#jobsTable").addEventListener("keydown", blurOnEnter);
   qs("#jobsDetailsTable").addEventListener("keydown", blurOnEnter);
 
@@ -859,6 +1121,8 @@ function wireEvents() {
 
   // Buttons
   qs("#btnAddMaterial").addEventListener("click", addMaterial);
+  const btnAddSupplier = qs("#btnAddSupplier");
+  if (btnAddSupplier) btnAddSupplier.addEventListener("click", addSupplier);
   qs("#btnAddJob").addEventListener("click", addJob);
   qs("#btnExportJson").addEventListener("click", exportJson);
 
@@ -872,3 +1136,6 @@ function wireEvents() {
 
 wireEvents();
 rerender();
+
+
+window.addEventListener("resize", () => renderSummaryChart());

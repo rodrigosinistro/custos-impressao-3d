@@ -1,258 +1,278 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Custos de Impressão 3D (BambuLab) — Web App</title>
-  <meta name="description" content="Calculadora de custos e precificação para impressão 3D (BambuLab), baseada na planilha XLSX." />
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Custos de Impressão 3D (BambuLab) — Web App</title>
+<meta content="Calculadora de custos e precificação para impressão 3D (BambuLab), baseada na planilha XLSX." name="description"/>
+<link href="styles.css" rel="stylesheet"/>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">🧾</div>
-      <div class="titles">
-        <h1>Custos de Impressão 3D (BambuLab)</h1>
-        <p class="subtitle">Trabalhos • Parâmetros • Materiais • Resumo</p>
-      </div>
-    </div>
+<header class="topbar">
+<div class="brand">
+<div class="logo">🧾</div>
+<div class="titles">
+<h1>Custos de Impressão 3D (BambuLab)</h1>
+<p class="subtitle">Trabalhos • Parâmetros • Materiais • Fornecedores • Resumo</p>
+</div>
+</div>
+<div class="actions">
+<button class="btn" id="btnExportJson">Exportar JSON</button>
+<label class="btn ghost" for="importJsonFile">Importar JSON</label>
+<input accept="application/json" hidden="" id="importJsonFile" type="file"/>
+</div>
+</header>
+<nav aria-label="Navegação" class="tabs">
+<button class="tab active" data-tab="jobs">Trabalhos</button>
+<button class="tab" data-tab="params">Parâmetros</button>
+<button class="tab" data-tab="materials">Materiais</button><button class="tab" data-tab="suppliers">Fornecedores</button>
+<button class="tab" data-tab="summary">Resumo</button>
+</nav>
+<main class="container">
+<section class="panel active" id="tab-jobs">
+<div class="panel-header">
+<h2>Trabalhos</h2>
+<div class="row">
+<button class="btn" id="btnAddJob">Adicionar trabalho</button>
+<input class="search" id="jobSearch" placeholder="Buscar por projeto/cliente…"/>
+</div>
+</div>
+<div class="full-bleed">
+<div class="table-wrap">
+<table class="table" id="jobsTable">
+<thead>
+<tr>
+<th class="sticky-left">ID</th>
+<th>Data</th>
+<th>Projeto/Cliente</th>
+<th>Material</th>
+<th class="num">Peso (g)</th>
+<th class="num">Tempo (h)</th>
+<th class="num">Perda (%)</th>
+<th class="num">Embalagem (R$)</th>
+<th class="num">Desconto (%)</th>
+<th>Pago</th>
+<th>Particular</th>
+<th class="num">Preço final (R$)</th>
+<th class="num">Subtotal (R$)</th>
+<th class="num">Preço sugerido (R$)</th>
+<th class="sticky-right"></th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+<details class="details full-bleed">
+<summary>Ver colunas calculadas (detalhado)</summary>
+<div class="table-wrap">
+<table class="table" id="jobsDetailsTable">
+<thead>
+<tr>
+<th class="sticky-left">ID</th>
+<th class="num">Custo material</th>
+<th class="num">Energia (kWh)</th>
+<th class="num">Custo energia</th>
+<th class="num">Mão de obra</th>
+<th class="num">Depreciação</th>
+<th class="num">Manutenção</th>
+<th class="num">Overhead</th>
+<th class="num">R$/h</th>
+<th class="num">R$/g</th>
+<th>Entrega</th>
+<th>Pgto. estimado</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</details>
+</section>
+<section class="panel" id="tab-params">
+<div class="panel-header">
+<h2>Parâmetros gerais</h2>
+<p class="hint">Os percentuais são digitados como <strong>%</strong> (ex.: 10 = 10%).</p>
+</div>
+<div class="grid">
+<div class="card">
+<h3>Energia</h3>
+<div class="form">
+<label>Tarifa de energia (R$/kWh)
+              <input data-param="tarifa_energia" inputmode="decimal" type="text"/>
+</label>
+<label>Energia extra por trabalho (kWh)
+              <input data-param="energia_extra_kwh" inputmode="decimal" type="text"/>
+</label>
+</div>
+</div>
+<div class="card">
+<h3>Equipamento</h3>
+<div class="form">
+<label>Custo da impressora (R$)
+              <input data-param="custo_impressora" inputmode="decimal" type="text"/>
+</label>
+<label>Custo do AMS Lite (R$) — opcional
+              <input data-param="custo_ams" inputmode="decimal" type="text"/>
+</label>
+<label>Vida útil (horas de impressão)
+              <input data-param="vida_util_h" inputmode="decimal" type="text"/>
+</label>
+<label>Valor de revenda (R$)
+              <input data-param="valor_revenda" inputmode="decimal" type="text"/>
+</label>
+<div class="kpi">
+<div>
+<div class="kpi-label">Custo total do equipamento</div>
+<div class="kpi-value" id="kpiEquipTotal">—</div>
+</div>
+<div>
+<div class="kpi-label">Depreciação por hora</div>
+<div class="kpi-value" id="kpiDepHora">—</div>
+</div>
+</div>
+</div>
+</div>
+<div class="card">
+<h3>Operação</h3>
+<div class="form">
+<label>Mão de obra (R$/hora)
+              <input data-param="mao_de_obra_h" inputmode="decimal" type="text"/>
+</label>
+<label>Manutenção (R$/hora)
+              <input data-param="manutencao_h" inputmode="decimal" type="text"/>
+</label>
+<label>Overhead/administrativo (%)
+              <input data-param="overhead_pct" inputmode="decimal" type="text"/>
+</label>
+<label>Lucro desejado (%)
+              <input data-param="lucro_pct" inputmode="decimal" type="text"/>
+</label>
+<label>Embalagem padrão (R$/trabalho)
+              <input data-param="embalagem_padrao" inputmode="decimal" type="text"/>
+</label>
+</div>
+</div>
+</div>
+</section>
+<section class="panel" id="tab-materials">
+<div class="panel-header">
+<h2>Materiais (filamentos)</h2>
+<div class="row">
+<button class="btn" id="btnAddMaterial">Adicionar material</button>
+</div>
+</div>
+<div class="table-wrap">
+<table class="table" id="materialsTable">
+<thead>
+<tr>
+<th>Material</th>
+<th>Marca/Fornecedor</th>
+<th class="num">Preço (R$/kg)</th>
+<th class="num">Custo (R$/g)</th>
+<th class="num">Potência média (W)</th>
+<th class="num">Desperdício padrão (%)</th>
+<th class="sticky-right"></th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+<p class="hint">O <strong>custo por grama</strong> é calculado automaticamente (preço/kg ÷ 1000).</p>
+</section><section class="panel" id="tab-suppliers">
+<div class="panel-header">
+<h2>Cadastro de Fornecedores</h2>
+<div class="row">
+<button class="btn" id="btnAddSupplier">Adicionar fornecedor</button>
+</div>
+</div>
+<div class="table-wrap">
+<table class="table" id="suppliersTable">
+<thead>
+<tr>
+<th>Fornecedor</th>
+<th>Contato</th>
+<th>Link</th>
+<th>Última compra</th>
+<th class="num">Valor última compra (R$)</th>
+<th>Avaliação</th>
+<th class="num">Prazo médio (dias)</th>
+<th class="num">Frete médio (R$)</th>
+<th>Observações</th>
+<th class="sticky-right"></th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+<p class="hint">Dica: use este cadastro para lembrar onde comprou, quanto pagou e como foi a qualidade do material/entrega.</p>
+</section>
+<section class="panel" id="tab-summary">
+<div class="panel-header">
+<h2>Resumo</h2>
 
-    <div class="actions">
-      <button id="btnExportJson" class="btn">Exportar JSON</button>
-      <label class="btn ghost" for="importJsonFile">Importar JSON</label>
-      <input id="importJsonFile" type="file" accept="application/json" hidden />
-    </div>
-  </header>
+</div>
+<div class="grid grid-2">
+<div class="card">
+<h3>Totais</h3>
+<div class="kpi-list">
+<div class="kpi-row">
+<div class="kpi-label">Total de trabalhos</div>
+<div class="kpi-value" id="sumJobs">—</div>
+</div>
+<div class="kpi-row">
+<div class="kpi-label">Total Subtotal</div>
+<div class="kpi-value" id="sumSubtotal">—</div>
+</div>
+<div class="kpi-row">
+<div class="kpi-label">Total Overhead</div>
+<div class="kpi-value" id="sumOverhead">—</div>
+</div>
+<div class="kpi-row">
+<div class="kpi-label">Total Preço sugerido</div>
+<div class="kpi-value" id="sumSuggested">—</div>
+</div>
+<div class="kpi-row">
+<div class="kpi-label">Total Custo sem Mão de Obra</div>
+<div class="kpi-value" id="sumNoLabor">—</div>
+</div>
+<div class="kpi-row">
+<div class="kpi-label">Total Devido (Preço final)</div>
+<div class="kpi-value" id="sumDue">—</div>
+</div>
+</div>
+</div>
+<div class="card">
+<h3>Recebíveis</h3>
+<div class="kpi-list">
+<div class="kpi-row">
+<div class="kpi-label">Total Recebido (Pago = SIM)</div>
+<div class="kpi-value" id="sumPaid">—</div>
+</div>
+<div class="kpi-row">
+<div class="kpi-label">Total Atrasado (Pago = ATRASADO)</div>
+<div class="kpi-value" id="sumLate">—</div>
+</div>
+</div>
+<p class="hint">Dica: use “Pago = ATRASADO” para cobrar depois.</p>
+</div>
+</div>
+<div class="card chart-card">
+<h3>Visão mensal</h3>
+<div class="legend">
+<span><i class="swatch s1"></i> Custo sem Mão de Obra</span>
+<span><i class="swatch s2"></i> Total Devido</span>
+<span><i class="swatch s3"></i> Total Recebido</span>
+</div>
+<canvas height="320" id="summaryChart"></canvas>
+<p class="hint">O mês é baseado na data de <strong>pagamento estimado</strong> (ajuste em “Trabalhos &gt; Ver colunas calculadas”).</p>
+</div>
 
-  <nav class="tabs" aria-label="Navegação">
-    <button class="tab active" data-tab="jobs">Trabalhos</button>
-    <button class="tab" data-tab="params">Parâmetros</button>
-    <button class="tab" data-tab="materials">Materiais</button>
-    <button class="tab" data-tab="summary">Resumo</button>
-  </nav>
-
-  <main class="container">
-    <section id="tab-jobs" class="panel active">
-      <div class="panel-header">
-        <h2>Trabalhos</h2>
-        <div class="row">
-          <button id="btnAddJob" class="btn">Adicionar trabalho</button>
-          <input id="jobSearch" class="search" placeholder="Buscar por projeto/cliente…" />
-        </div>
-      </div>
-
-      <div class="full-bleed">
-        <div class="table-wrap">
-          <table class="table" id="jobsTable">
-          <thead>
-            <tr>
-              <th class="sticky-left">ID</th>
-              <th>Data</th>
-              <th>Projeto/Cliente</th>
-              <th>Material</th>
-              <th class="num">Peso (g)</th>
-              <th class="num">Tempo (h)</th>
-              <th class="num">Perda (%)</th>
-              <th class="num">Embalagem (R$)</th>
-              <th class="num">Desconto (%)</th>
-              <th>Pago</th>
-              <th>Particular</th>
-              <th class="num">Preço final (R$)</th>
-              <th class="num">Subtotal (R$)</th>
-              <th class="num">Preço sugerido (R$)</th>
-              <th class="sticky-right"></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <details class="details full-bleed">
-        <summary>Ver colunas calculadas (detalhado)</summary>
-        <div class="table-wrap">
-          <table class="table" id="jobsDetailsTable">
-            <thead>
-              <tr>
-                <th class="sticky-left">ID</th>
-                <th class="num">Custo material</th>
-                <th class="num">Energia (kWh)</th>
-                <th class="num">Custo energia</th>
-                <th class="num">Mão de obra</th>
-                <th class="num">Depreciação</th>
-                <th class="num">Manutenção</th>
-                <th class="num">Overhead</th>
-                <th class="num">R$/h</th>
-                <th class="num">R$/g</th>
-                <th>Entrega</th>
-                <th>Pgto. estimado</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </details>
-    </section>
-
-    <section id="tab-params" class="panel">
-      <div class="panel-header">
-        <h2>Parâmetros gerais</h2>
-        <p class="hint">Os percentuais são digitados como <strong>%</strong> (ex.: 10 = 10%).</p>
-      </div>
-
-      <div class="grid">
-        <div class="card">
-          <h3>Energia</h3>
-          <div class="form">
-            <label>Tarifa de energia (R$/kWh)
-              <input data-param="tarifa_energia" type="text" inputmode="decimal" />
-            </label>
-            <label>Energia extra por trabalho (kWh)
-              <input data-param="energia_extra_kwh" type="text" inputmode="decimal" />
-            </label>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>Equipamento</h3>
-          <div class="form">
-            <label>Custo da impressora (R$)
-              <input data-param="custo_impressora" type="text" inputmode="decimal" />
-            </label>
-            <label>Custo do AMS Lite (R$) — opcional
-              <input data-param="custo_ams" type="text" inputmode="decimal" />
-            </label>
-            <label>Vida útil (horas de impressão)
-              <input data-param="vida_util_h" type="text" inputmode="decimal" />
-            </label>
-            <label>Valor de revenda (R$)
-              <input data-param="valor_revenda" type="text" inputmode="decimal" />
-            </label>
-
-            <div class="kpi">
-              <div>
-                <div class="kpi-label">Custo total do equipamento</div>
-                <div id="kpiEquipTotal" class="kpi-value">—</div>
-              </div>
-              <div>
-                <div class="kpi-label">Depreciação por hora</div>
-                <div id="kpiDepHora" class="kpi-value">—</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>Operação</h3>
-          <div class="form">
-            <label>Mão de obra (R$/hora)
-              <input data-param="mao_de_obra_h" type="text" inputmode="decimal" />
-            </label>
-            <label>Manutenção (R$/hora)
-              <input data-param="manutencao_h" type="text" inputmode="decimal" />
-            </label>
-            <label>Overhead/administrativo (%)
-              <input data-param="overhead_pct" type="text" inputmode="decimal" />
-            </label>
-            <label>Lucro desejado (%)
-              <input data-param="lucro_pct" type="text" inputmode="decimal" />
-            </label>
-            <label>Embalagem padrão (R$/trabalho)
-              <input data-param="embalagem_padrao" type="text" inputmode="decimal" />
-            </label>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="tab-materials" class="panel">
-      <div class="panel-header">
-        <h2>Materiais (filamentos)</h2>
-        <div class="row">
-          <button id="btnAddMaterial" class="btn">Adicionar material</button>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-        <table class="table" id="materialsTable">
-          <thead>
-            <tr>
-              <th>Material</th>
-              <th>Marca/Fornecedor</th>
-              <th class="num">Preço (R$/kg)</th>
-              <th class="num">Custo (R$/g)</th>
-              <th class="num">Potência média (W)</th>
-              <th class="num">Desperdício padrão (%)</th>
-              <th class="sticky-right"></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <p class="hint">O <strong>custo por grama</strong> é calculado automaticamente (preço/kg ÷ 1000).</p>
-    </section>
-
-    <section id="tab-summary" class="panel">
-      <div class="panel-header">
-        <h2>Resumo</h2>
-        <p class="hint">Soma apenas os trabalhos marcados como “Incluir = SIM”.</p>
-      </div>
-
-      <div class="grid grid-2">
-        <div class="card">
-          <h3>Totais</h3>
-          <div class="kpi-list">
-            <div class="kpi-row">
-              <div class="kpi-label">Total de trabalhos</div>
-              <div id="sumJobs" class="kpi-value">—</div>
-            </div>
-            <div class="kpi-row">
-              <div class="kpi-label">Total Subtotal</div>
-              <div id="sumSubtotal" class="kpi-value">—</div>
-            </div>
-            <div class="kpi-row">
-              <div class="kpi-label">Total Overhead</div>
-              <div id="sumOverhead" class="kpi-value">—</div>
-            </div>
-            <div class="kpi-row">
-              <div class="kpi-label">Total Preço sugerido</div>
-              <div id="sumSuggested" class="kpi-value">—</div>
-            </div>
-            <div class="kpi-row">
-              <div class="kpi-label">Total Custo sem Mão de Obra</div>
-              <div id="sumNoLabor" class="kpi-value">—</div>
-            </div>
-            <div class="kpi-row">
-              <div class="kpi-label">Total Devido (Preço final)</div>
-              <div id="sumDue" class="kpi-value">—</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>Recebíveis</h3>
-          <div class="kpi-list">
-            <div class="kpi-row">
-              <div class="kpi-label">Total Recebido (Pago = SIM)</div>
-              <div id="sumPaid" class="kpi-value">—</div>
-            </div>
-            <div class="kpi-row">
-              <div class="kpi-label">Total Atrasado (Pago = ATRASADO)</div>
-              <div id="sumLate" class="kpi-value">—</div>
-            </div>
-          </div>
-
-          <p class="hint">Dica: use “Pago = ATRASADO” para cobrar depois.</p>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
+</section>
+</main>
+<footer class="footer">
     Feito para rodar 100% no navegador (GitHub Pages). Os dados ficam salvos localmente no seu dispositivo.
   </footer>
-
-  <script type="module" src="app.js?v=20260226_0105"></script>
+<script src="app.js?v=20260226_0325" type="module"></script>
 </body>
 </html>
