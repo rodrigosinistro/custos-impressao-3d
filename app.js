@@ -4,7 +4,7 @@
 const STORAGE_KEY = "custos-impressao-3d-bambulab:v1";
 
 const DEFAULTS = {
-  "version": 2,
+  "version": 3,
   "params": {
     "tarifa_energia": 0.87,
     "custo_impressora": 4999.0,
@@ -176,6 +176,26 @@ function loadState() {
       parsed.version = 2;
     }
 
+
+    // Migração v2 -> v3 (Incluir -> Particular)
+    if (Number(parsed.version || 1) < 3) {
+      if (Array.isArray(parsed.jobs)) {
+        parsed.jobs.forEach(j => {
+          if (j && typeof j === "object") {
+            if (typeof j.particular !== "boolean") {
+              // Se antes o usuário marcava "Incluir = NÃO", consideramos como "Particular"
+              if ("incluir" in j) {
+                j.particular = (j.incluir === false);
+              } else {
+                j.particular = false;
+              }
+            }
+            if ("incluir" in j) delete j.incluir;
+          }
+        });
+      }
+      parsed.version = 3;
+    }
     return parsed;
   } catch {
     return deepClone(DEFAULTS);
@@ -238,7 +258,7 @@ function computeJob(job, params, materialMap) {
 
   const custo_energia = energia_kwh * clampNumber(params.tarifa_energia, 0);
 
-  const mao_de_obra = tempo_h * clampNumber(params.mao_de_obra_h, 0);
+  const mao_de_obra = job.particular ? 0 : (tempo_h * clampNumber(params.mao_de_obra_h, 0));
   const depreciacao = tempo_h * clampNumber(params.depreciacao_h, 0);
   const manutencao = tempo_h * clampNumber(params.manutencao_h, 0);
 
@@ -333,22 +353,27 @@ function computeAll() {
 }
 
 function computeSummary() {
-  const rows = state.jobs.filter(j => j.incluir !== false);
+  const all = Array.isArray(state.jobs) ? state.jobs : [];
+  const billable = all.filter(j => !j.particular);
 
-  const sum = (fn) => rows.reduce((acc, j) => acc + clampNumber(fn(j), 0), 0);
+  const sum = (rows, fn) => rows.reduce((acc, j) => acc + clampNumber(fn(j), 0), 0);
 
-  const totalJobs = rows.length;
-  const totalSubtotal = sum(j => j.derived.subtotal);
-  const totalOverhead = sum(j => j.derived.overhead);
-  const totalSuggested = sum(j => j.derived.preco_sugerido);
-  const totalNoLabor = sum(j => j.derived.custo_sem_mao);
-  const totalDue = sum(j => j.derived.preco_final);
+  const totalJobs = all.length;
 
-  const totalPaid = rows
+  // Totais de custo/precificação (inclui também trabalhos particulares)
+  const totalSubtotal = sum(all, j => j.derived.subtotal);
+  const totalOverhead = sum(all, j => j.derived.overhead);
+  const totalSuggested = sum(all, j => j.derived.preco_sugerido);
+  const totalNoLabor = sum(all, j => j.derived.custo_sem_mao);
+
+  // Recebíveis (apenas trabalhos NÃO particulares)
+  const totalDue = sum(billable, j => j.derived.preco_final);
+
+  const totalPaid = billable
     .filter(j => String(j.pago).toUpperCase() === "SIM")
     .reduce((a, j) => a + clampNumber(j.derived.preco_final, 0), 0);
 
-  const totalLate = rows
+  const totalLate = billable
     .filter(j => String(j.pago).toUpperCase() === "ATRASADO")
     .reduce((a, j) => a + clampNumber(j.derived.preco_final, 0), 0);
 
@@ -363,6 +388,10 @@ function computeSummary() {
     totalLate,
   };
 }
+
+function $(sel) { return document.querySelector(sel); }
+function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
+
 
 function $(sel) { return document.querySelector(sel); }
 function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
@@ -466,11 +495,8 @@ function renderJobs(materialMap) {
           <option value="ATRASADO">ATRASADO</option>
         </select>
       </td>
-      <td class="num">
-        <select class="cell-input" data-j="incluir">
-          <option value="SIM">SIM</option>
-          <option value="NÃO">NÃO</option>
-        </select>
+      <td class="num" title="Marque se for um trabalho particular (não entra nos recebíveis)">
+        <input class="cell-check" data-j="particular" type="checkbox" ${j.particular ? "checked" : ""} />
       </td>
       <td class="num"><span class="pill">${fmtBRL(d.preco_final)}</span></td>
       <td class="num"><span class="small">${fmtBRL(d.subtotal)}</span></td>
@@ -486,7 +512,6 @@ function renderJobs(materialMap) {
     // set selected options
     tr.querySelector('[data-j="material"]').value = j.material || "";
     tr.querySelector('[data-j="pago"]').value = j.pago || "NÃO";
-    tr.querySelector('[data-j="incluir"]').value = (j.incluir === false) ? "NÃO" : "SIM";
 
     // Details
     const tr2 = document.createElement("tr");
@@ -574,7 +599,7 @@ function addJob() {
     embalagem_override: null,
     desconto_factor: 0, // 0% por padrão
     pago: "NÃO",
-    incluir: true,
+    particular: false,
     data_entrega: "",
     data_pagamento: "",
   });
@@ -659,7 +684,7 @@ function wireEvents() {
   });
 
   // Materials table (delegation)
-  $("#materialsTable").addEventListener("input", (ev) => {
+  $("#materialsTable").addEventListener("change", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -683,7 +708,18 @@ function wireEvents() {
     rerender();
   });
 
-  $("#materialsTable").addEventListener("click", (ev) => {
+  
+
+  // UX: Enter confirma e salva (dispara change via blur)
+  $("#materialsTable").addEventListener("keydown", (ev) => {
+    const target = ev.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (ev.key === "Enter" && (target.matches("input") || target.matches("select"))) {
+      ev.preventDefault();
+      target.blur();
+    }
+  });
+$("#materialsTable").addEventListener("click", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     if (target.dataset.action !== "rm-material") return;
@@ -696,7 +732,7 @@ function wireEvents() {
   });
 
   // Jobs table (delegation)
-  $("#jobsTable").addEventListener("input", (ev) => {
+  $("#jobsTable").addEventListener("change", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -729,12 +765,23 @@ function wireEvents() {
     }
 
     if (key === "pago") job.pago = target.value;
-    if (key === "incluir") job.incluir = (String(target.value).toUpperCase() === "SIM");
+    if (key === "particular") job.particular = !!target.checked;
 
     rerender();
   });
 
-  $("#jobsTable").addEventListener("click", (ev) => {
+  
+
+  // UX: Enter confirma e salva (dispara change via blur)
+  $("#jobsTable").addEventListener("keydown", (ev) => {
+    const target = ev.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (ev.key === "Enter" && (target.matches("input") || target.matches("select"))) {
+      ev.preventDefault();
+      target.blur();
+    }
+  });
+$("#jobsTable").addEventListener("click", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const action = target.dataset.action;
@@ -752,7 +799,7 @@ function wireEvents() {
   });
 
   // Jobs details (delivery/payment date overrides)
-  $("#jobsDetailsTable").addEventListener("input", (ev) => {
+  $("#jobsDetailsTable").addEventListener("change", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -785,7 +832,8 @@ function wireEvents() {
     ev.target.value = "";
   });
 
-  $("#btnReset").addEventListener("click", resetAll);
+  const resetBtn = $("#btnReset");
+  if (resetBtn) resetBtn.addEventListener("click", resetAll);
 }
 
 wireEvents();

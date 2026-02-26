@@ -301,3 +301,17 @@ input:focus, select:focus{ border-color: rgba(106,167,255,.5); }
 }
 
 .table thead .sticky-left, .table thead .sticky-right{ z-index: 5; }
+
+
+/* Ajustes: detalhes em largura total (alinha com a tabela principal) */
+.details.full-bleed{
+  padding: 10px 22px;
+}
+
+/* Checkbox em células */
+.cell-check{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}

@@ -21,19 +21,18 @@
       <button id="btnExportJson" class="btn">Exportar JSON</button>
       <label class="btn ghost" for="importJsonFile">Importar JSON</label>
       <input id="importJsonFile" type="file" accept="application/json" hidden />
-      <button id="btnReset" class="btn danger" title="Apaga os dados salvos no navegador">Resetar tudo</button>
-    </div>
+</div>
   </header>
 
   <nav class="tabs" aria-label="Navegação">
-    <button class="tab active" data-tab="jobs">Trabalhos</button>
-    <button class="tab" data-tab="params">Parâmetros</button>
+    <button class="tab active" data-tab="params">Parâmetros</button>
     <button class="tab" data-tab="materials">Materiais</button>
+    <button class="tab" data-tab="jobs">Trabalhos</button>
     <button class="tab" data-tab="summary">Resumo</button>
   </nav>
 
   <main class="container">
-    <section id="tab-jobs" class="panel active">
+    <section id="tab-jobs" class="panel">
       <div class="panel-header">
         <h2>Trabalhos</h2>
         <div class="row">
@@ -57,7 +56,7 @@
               <th class="num">Embalagem (R$)</th>
               <th class="num">Desconto (%)</th>
               <th>Pago</th>
-              <th>Incluir</th>
+              <th>Particular</th>
               <th class="num">Preço final (R$)</th>
               <th class="num">Subtotal (R$)</th>
               <th class="num">Preço sugerido (R$)</th>
@@ -69,11 +68,10 @@
         </div>
       </div>
 
-      <details class="details">
+      <details class="details full-bleed">
         <summary>Ver colunas calculadas (detalhado)</summary>
-        <div class="full-bleed">
-          <div class="table-wrap">
-            <table class="table" id="jobsDetailsTable">
+        <div class="table-wrap">
+          <table class="table" id="jobsDetailsTable">
             <thead>
               <tr>
                 <th class="sticky-left">ID</th>
@@ -96,7 +94,7 @@
       </details>
     </section>
 
-    <section id="tab-params" class="panel">
+    <section id="tab-params" class="panel active">
       <div class="panel-header">
         <h2>Parâmetros gerais</h2>
         <p class="hint">Os percentuais são digitados como <strong>%</strong> (ex.: 10 = 10%).</p>
@@ -204,7 +202,7 @@
     <section id="tab-summary" class="panel">
       <div class="panel-header">
         <h2>Resumo</h2>
-        <p class="hint">Soma apenas os trabalhos marcados como “Incluir = SIM”.</p>
+        <p class="hint">Soma todos os trabalhos. Itens marcados como “Particular” não entram nos recebíveis.</p>
       </div>
 
       <div class="grid grid-2">
