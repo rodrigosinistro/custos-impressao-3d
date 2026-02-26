@@ -101,10 +101,50 @@ function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
+function parseBRNumber(value) {
+  if (typeof value === "number") return value;
+  if (value == null) return NaN;
+  let s = String(value).trim();
+  if (!s) return NaN;
+
+  // Remove currency symbols and spaces, keep digits, minus, comma and dot
+  s = s.replace(/[^0-9,\.\-]/g, "");
+
+  // If both comma and dot exist, assume dot = thousands separator and comma = decimal separator.
+  if (s.includes(",") && s.includes(".")) {
+    s = s.replace(/\./g, "").replace(/,/g, ".");
+  } else if (s.includes(",")) {
+    // Only comma: treat as decimal separator
+    s = s.replace(/,/g, ".");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 function clampNumber(x, fallback = 0) {
-  const n = Number(x);
+  const n = parseBRNumber(x);
   return Number.isFinite(n) ? n : fallback;
 }
+
+
+function snapshotParamsForJob(params) {
+  // Somente os campos que entram nos cálculos dos trabalhos.
+  return {
+    tarifa_energia: clampNumber(params.tarifa_energia, 0),
+    energia_extra_kwh: clampNumber(params.energia_extra_kwh, 0),
+    mao_de_obra_h: clampNumber(params.mao_de_obra_h, 0),
+    manutencao_h: clampNumber(params.manutencao_h, 0),
+    depreciacao_h: clampNumber(params.depreciacao_h, 0),
+    overhead_pct: clampNumber(params.overhead_pct, 0),
+    lucro_pct: clampNumber(params.lucro_pct, 0),
+    embalagem_padrao: clampNumber(params.embalagem_padrao, 0),
+  };
+}
+
+function effectiveParamsForJob(job) {
+  return job && job.params_snapshot ? job.params_snapshot : snapshotParamsForJob(state.params);
+}
+
 
 function fmtBRL(value) {
   const n = clampNumber(value, 0);
@@ -114,6 +154,13 @@ function fmtBRL(value) {
 function fmtNum(value, digits = 2) {
   const n = clampNumber(value, 0);
   return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+}
+
+
+function fmtInputNumber(value, maxDigits = 6) {
+  const n = clampNumber(value, NaN);
+  if (!Number.isFinite(n)) return "";
+  return new Intl.NumberFormat("pt-BR", { useGrouping: false, maximumFractionDigits: maxDigits }).format(n);
 }
 
 function dateISOToInput(value) {
@@ -214,7 +261,8 @@ function recomputeDerivedParams(params) {
   };
 }
 
-function computeJob(job, params, materialMap) {
+function computeJob(job, materialMap) {
+  const params = effectiveParamsForJob(job);
   const material = materialMap.get(job.material) || null;
 
   const peso_g = clampNumber(job.peso_g, 0);
@@ -326,8 +374,9 @@ function computeAll() {
       embalagem_override: (j.embalagem_override != null) ? clampNumber(j.embalagem_override, 0) : null,
       data_entrega: j.data_entrega || "",
       data_pagamento: j.data_pagamento || "",
+      params_snapshot: j.params_snapshot ? snapshotParamsForJob(j.params_snapshot) : snapshotParamsForJob(state.params),
     };
-    return computeJob(job, state.params, materialMap);
+    return computeJob(job, materialMap);
   });
 
   // Mantém a mesma ordem da planilha: crescente por ID
@@ -389,15 +438,16 @@ function renderParams() {
     if (!(key in p)) return;
 
     if (key.endsWith("_pct")) {
-      inp.value = String(decimalToPercentInput(p[key]));
+      inp.value = fmtInputNumber(decimalToPercentInput(p[key]), 3);
     } else {
-      inp.value = String(p[key] ?? "");
+      inp.value = fmtInputNumber(p[key], 6);
     }
   });
 
   qs("#kpiEquipTotal").textContent = fmtBRL(p.custo_total_equip);
   qs("#kpiDepHora").textContent = fmtBRL(p.depreciacao_h) + " /h";
 }
+
 
 function renderMaterials() {
   const tbody = qs("#materialsTable tbody");
@@ -410,10 +460,10 @@ function renderMaterials() {
     tr.innerHTML = `
       <td><input class="cell-input" data-m="material" value="${escapeHtml(m.material)}" placeholder="Ex.: PLA" /></td>
       <td><input class="cell-input" data-m="marca" value="${escapeHtml(m.marca)}" placeholder="Opcional" /></td>
-      <td class="num"><input class="cell-input" data-m="preco_kg" type="number" step="0.01" min="0" value="${m.preco_kg}" /></td>
+      <td class="num"><input class="cell-input" data-m="preco_kg" type="text" inputmode="decimal" value="${fmtInputNumber(m.preco_kg, 2)}" /></td>
       <td class="num"><span class="pill">${fmtNum(m.custo_g, 3)}</span></td>
-      <td class="num"><input class="cell-input" data-m="potencia_w" type="number" step="1" min="0" value="${m.potencia_w}" /></td>
-      <td class="num"><input class="cell-input" data-m="desperdicio_pct" type="number" step="0.1" min="0" value="${decimalToPercentInput(m.desperdicio_pct)}" /></td>
+      <td class="num"><input class="cell-input" data-m="potencia_w" type="text" inputmode="decimal" value="${fmtInputNumber(m.potencia_w, 0)}" /></td>
+      <td class="num"><input class="cell-input" data-m="desperdicio_pct" type="text" inputmode="decimal" value="${fmtInputNumber(decimalToPercentInput(m.desperdicio_pct), 2)}" /></td>
       <td class="num">
         <button class="btn danger" data-action="rm-material" title="Remover">Remover</button>
       </td>
@@ -443,9 +493,9 @@ function renderJobs(materialMap) {
     const tr = document.createElement("tr");
     tr.dataset.id = String(j.id);
 
-    const perdaPctInput = (j.perda_pct_override != null) ? decimalToPercentInput(j.perda_pct_override) : "";
-    const embInput = (j.embalagem_override != null) ? j.embalagem_override : "";
-    const descontoPct = decimalToPercentInput(j.desconto_factor);
+    const perdaPctInput = (j.perda_pct_override != null) ? fmtInputNumber(decimalToPercentInput(j.perda_pct_override), 3) : "";
+    const embInput = (j.embalagem_override != null) ? fmtInputNumber(j.embalagem_override, 2) : "";
+    const descontoPct = fmtInputNumber(decimalToPercentInput(j.desconto_factor), 3);
 
     tr.innerHTML = `
       <td class="sticky-left"><span class="pill">#${j.id}</span></td>
@@ -457,16 +507,16 @@ function renderJobs(materialMap) {
           ${materialOptions}
         </select>
       </td>
-      <td class="num"><input class="cell-input" data-j="peso_g" type="number" step="0.1" min="0" value="${j.peso_g}" /></td>
-      <td class="num"><input class="cell-input" data-j="tempo_h" type="number" step="0.01" min="0" value="${j.tempo_h}" /></td>
+      <td class="num"><input class="cell-input" data-j="peso_g" type="text" inputmode="decimal" value="${fmtInputNumber(j.peso_g, 3)}" /></td>
+      <td class="num"><input class="cell-input" data-j="tempo_h" type="text" inputmode="decimal" value="${fmtInputNumber(j.tempo_h, 3)}" /></td>
       <td class="num" title="Vazio = usa o desperdício padrão do material">
-        <input class="cell-input" data-j="perda_override" type="number" step="0.1" min="0" placeholder="${fmtNum(decimalToPercentInput(d.perda_pct), 2)}" value="${perdaPctInput}" />
+        <input class="cell-input" data-j="perda_override" type="text" inputmode="decimal" placeholder="${fmtNum(decimalToPercentInput(d.perda_pct), 2)}" value="${perdaPctInput}" />
       </td>
       <td class="num" title="Vazio = usa a embalagem padrão">
-        <input class="cell-input" data-j="embalagem_override" type="number" step="0.1" min="0" placeholder="${fmtNum(d.embalagem, 2)}" value="${embInput}" />
+        <input class="cell-input" data-j="embalagem_override" type="text" inputmode="decimal" placeholder="${fmtNum(d.embalagem, 2)}" value="${embInput}" />
       </td>
       <td class="num">
-        <input class="cell-input" data-j="desconto_factor" type="number" step="0.1" min="0" value="${descontoPct}" />
+        <input class="cell-input" data-j="desconto_factor" type="text" inputmode="decimal" value="${descontoPct}" />
       </td>
       <td>
         <select class="cell-input" data-j="pago">
@@ -582,12 +632,14 @@ function addJob() {
     embalagem_override: null,
     desconto_factor: 0, // 0% por padrão
     pago: "NÃO",
-    incluir: true,
+    particular: false,
+    params_snapshot: snapshotParamsForJob(state.params),
     data_entrega: "",
     data_pagamento: "",
   });
   rerender();
 }
+
 
 function removeJob(id) {
   const i = state.jobs.findIndex(j => j.id === id);
@@ -653,7 +705,7 @@ function wireEvents() {
 
   // Params
   qsa("[data-param]").forEach(inp => {
-    inp.addEventListener("input", () => {
+    const commit = () => {
       const key = inp.dataset.param;
       if (!(key in state.params)) return;
 
@@ -663,8 +715,18 @@ function wireEvents() {
         state.params[key] = clampNumber(inp.value, 0);
       }
       rerender();
+    };
+
+    // Evita re-render a cada tecla (melhora digitação e mantém vírgula).
+    inp.addEventListener("change", commit);
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        inp.blur(); // dispara "change"
+      }
     });
   });
+
 
   // Materials table (delegation)
   qs("#materialsTable").addEventListener("change", (ev) => {

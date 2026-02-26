@@ -105,10 +105,10 @@
           <h3>Energia</h3>
           <div class="form">
             <label>Tarifa de energia (R$/kWh)
-              <input data-param="tarifa_energia" type="number" step="0.01" min="0" />
+              <input data-param="tarifa_energia" type="text" inputmode="decimal" />
             </label>
             <label>Energia extra por trabalho (kWh)
-              <input data-param="energia_extra_kwh" type="number" step="0.001" min="0" />
+              <input data-param="energia_extra_kwh" type="text" inputmode="decimal" />
             </label>
           </div>
         </div>
@@ -117,16 +117,16 @@
           <h3>Equipamento</h3>
           <div class="form">
             <label>Custo da impressora (R$)
-              <input data-param="custo_impressora" type="number" step="1" min="0" />
+              <input data-param="custo_impressora" type="text" inputmode="decimal" />
             </label>
             <label>Custo do AMS Lite (R$) — opcional
-              <input data-param="custo_ams" type="number" step="1" min="0" />
+              <input data-param="custo_ams" type="text" inputmode="decimal" />
             </label>
             <label>Vida útil (horas de impressão)
-              <input data-param="vida_util_h" type="number" step="1" min="1" />
+              <input data-param="vida_util_h" type="text" inputmode="decimal" />
             </label>
             <label>Valor de revenda (R$)
-              <input data-param="valor_revenda" type="number" step="1" min="0" />
+              <input data-param="valor_revenda" type="text" inputmode="decimal" />
             </label>
 
             <div class="kpi">
@@ -146,28 +146,22 @@
           <h3>Operação</h3>
           <div class="form">
             <label>Mão de obra (R$/hora)
-              <input data-param="mao_de_obra_h" type="number" step="0.5" min="0" />
+              <input data-param="mao_de_obra_h" type="text" inputmode="decimal" />
             </label>
             <label>Manutenção (R$/hora)
-              <input data-param="manutencao_h" type="number" step="0.1" min="0" />
+              <input data-param="manutencao_h" type="text" inputmode="decimal" />
             </label>
             <label>Overhead/administrativo (%)
-              <input data-param="overhead_pct" type="number" step="0.1" min="0" />
+              <input data-param="overhead_pct" type="text" inputmode="decimal" />
             </label>
             <label>Lucro desejado (%)
-              <input data-param="lucro_pct" type="number" step="0.1" min="0" />
+              <input data-param="lucro_pct" type="text" inputmode="decimal" />
             </label>
             <label>Embalagem padrão (R$/trabalho)
-              <input data-param="embalagem_padrao" type="number" step="0.1" min="0" />
+              <input data-param="embalagem_padrao" type="text" inputmode="decimal" />
             </label>
           </div>
         </div>
-      </div>
-
-      <div class="note">
-        <strong>Importante:</strong> este app replica as fórmulas da planilha (inclusive um detalhe:
-        o campo <em>Energia (kWh)</em> também entra em alguns somatórios na planilha original).
-        Se você quiser “corrigir” isso no app depois, é só me pedir.
       </div>
     </section>
 
