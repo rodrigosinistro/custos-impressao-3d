@@ -295,7 +295,7 @@ function computeJob(job, materialMap) {
 
   const custo_energia = energia_kwh * clampNumber(params.tarifa_energia, 0);
 
-  const mao_rate = job.particular ? 0 : clampNumber(params.mao_de_obra_h, 0);
+  const mao_rate = (job.particular || job.no_labor) ? 0 : clampNumber(params.mao_de_obra_h, 0);
   const mao_de_obra = tempo_h * mao_rate;
   const depreciacao = tempo_h * clampNumber(params.depreciacao_h, 0);
   const manutencao = tempo_h * clampNumber(params.manutencao_h, 0);
@@ -309,7 +309,7 @@ function computeJob(job, materialMap) {
   const custo_por_hora = tempo_h > 0 ? (subtotal / tempo_h) : 0;
   const preco_por_g = peso_g > 0 ? (preco_sugerido / peso_g) : 0;
 
-  const desconto_factor = clampNumber(job.desconto_factor, 0); // mesma coluna T
+  const desconto_factor = job.particular ? 1 : clampNumber(job.desconto_factor, 0); // mesma coluna T
   const valor_desconto = preco_sugerido * desconto_factor;     // coluna U = P*T
   const preco_final = floorToMultiple(preco_sugerido - valor_desconto, 10); // W = FLOOR.MATH(P-U,10)
 
@@ -379,12 +379,22 @@ function computeAll() {
       pago: String(j.pago || "NÃO"),
             // Particular: não entra em recebíveis (migra: "Incluir = NÃO" -> particular = true)
       particular: (j.particular != null) ? !!j.particular : !legacyIncluir,
+      // Não cobrar mão-de-obra: remove apenas o custo de mão-de-obra do cálculo (ainda entra em recebíveis)
+      no_labor: (j.no_labor != null) ? !!j.no_labor : false,
       perda_pct_override: (j.perda_pct_override != null) ? clampNumber(j.perda_pct_override, 0) : null,
       embalagem_override: (j.embalagem_override != null) ? clampNumber(j.embalagem_override, 0) : null,
       data_entrega: j.data_entrega || "",
       data_pagamento: j.data_pagamento || "",
       params_snapshot: j.params_snapshot ? snapshotParamsForJob(j.params_snapshot) : snapshotParamsForJob(state.params),
     };
+
+    // Regras especiais:
+    // - Particular: 100% desconto (preço final = 0), pago = SIM e desativa "não cobrar mão-de-obra".
+    if (job.particular) {
+      job.no_labor = false;
+      job.desconto_factor = 1;
+      job.pago = "SIM";
+    }
     return computeJob(job, materialMap);
   });
 
@@ -576,6 +586,9 @@ function renderJobs(materialMap) {
       <td class="center">
         <input class="cell-check" data-j="particular" type="checkbox" ${j.particular ? "checked" : ""} />
       </td>
+      <td class="center">
+        <input class="cell-check" data-j="no_labor" type="checkbox" ${j.no_labor ? "checked" : ""} />
+      </td>
       <td class="num"><span class="pill">${fmtBRL(d.preco_final)}</span></td>
       <td class="num"><span class="small">${fmtBRL(d.subtotal)}</span></td>
       <td class="num"><span class="small">${fmtBRL(d.preco_sugerido)}</span></td>
@@ -591,8 +604,21 @@ function renderJobs(materialMap) {
     tr.querySelector('[data-j="material"]').value = j.material || "";
     const pagoSel = tr.querySelector('[data-j="pago"]');
     pagoSel.value = j.pago || "NÃO";
-    // Se for particular, não faz sentido controlar recebíveis
-    if (j.particular) { pagoSel.value = "NÃO"; pagoSel.disabled = true; }
+    // Se for particular: 100% desconto e pago = SIM (travado)
+    if (j.particular) {
+      pagoSel.value = "SIM";
+      pagoSel.disabled = true;
+      const noLaborEl = tr.querySelector('[data-j="no_labor"]');
+      if (noLaborEl) { noLaborEl.checked = false; noLaborEl.disabled = true; }
+      const descEl = tr.querySelector('[data-j="desconto_factor"]');
+      if (descEl) { descEl.value = "100"; descEl.disabled = true; }
+    } else {
+      pagoSel.disabled = false;
+      const noLaborEl = tr.querySelector('[data-j="no_labor"]');
+      if (noLaborEl) noLaborEl.disabled = false;
+      const descEl = tr.querySelector('[data-j="desconto_factor"]');
+      if (descEl) descEl.disabled = false;
+    }
 
     // Details
     const tr2 = document.createElement("tr");
@@ -846,6 +872,7 @@ function addJob() {
     desconto_factor: 0, // 0% por padrão
     pago: "NÃO",
     particular: false,
+    no_labor: false,
     params_snapshot: snapshotParamsForJob(state.params),
     data_entrega: "",
     data_pagamento: "",
@@ -1055,7 +1082,42 @@ function wireEvents() {
     }
 
     if (key === "pago") job.pago = target.value;
-    if (key === "particular") job.particular = !!target.checked;
+
+    if (key === "no_labor") {
+      // Não permitir se for particular (fica desativado)
+      job.no_labor = job.particular ? false : !!target.checked;
+    }
+
+    if (key === "particular") {
+      const checked = !!target.checked;
+      if (checked) {
+        // Guarda estado anterior para permitir desfazer sem perder a configuração do usuário.
+        if (!job.__prev) {
+          job.__prev = {
+            desconto_factor: job.desconto_factor,
+            pago: job.pago,
+            no_labor: job.no_labor,
+          };
+        }
+        job.particular = true;
+        job.no_labor = false;
+        job.desconto_factor = 1; // 100%
+        job.pago = "SIM";
+      } else {
+        job.particular = false;
+        // Restaura valores anteriores, se houver
+        if (job.__prev) {
+          job.desconto_factor = job.__prev.desconto_factor ?? job.desconto_factor;
+          job.pago = job.__prev.pago ?? job.pago;
+          job.no_labor = job.__prev.no_labor ?? job.no_labor;
+          delete job.__prev;
+        } else {
+          // fallback seguro
+          if (clampNumber(job.desconto_factor, 0) === 1) job.desconto_factor = 0;
+          if (String(job.pago || "").toUpperCase() === "SIM") job.pago = "NÃO";
+        }
+      }
+    }
 
     rerender();
   });
