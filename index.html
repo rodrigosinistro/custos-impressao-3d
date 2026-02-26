@@ -21,18 +21,18 @@
       <button id="btnExportJson" class="btn">Exportar JSON</button>
       <label class="btn ghost" for="importJsonFile">Importar JSON</label>
       <input id="importJsonFile" type="file" accept="application/json" hidden />
-</div>
+    </div>
   </header>
 
   <nav class="tabs" aria-label="Navegação">
-    <button class="tab active" data-tab="params">Parâmetros</button>
+    <button class="tab active" data-tab="jobs">Trabalhos</button>
+    <button class="tab" data-tab="params">Parâmetros</button>
     <button class="tab" data-tab="materials">Materiais</button>
-    <button class="tab" data-tab="jobs">Trabalhos</button>
     <button class="tab" data-tab="summary">Resumo</button>
   </nav>
 
   <main class="container">
-    <section id="tab-jobs" class="panel">
+    <section id="tab-jobs" class="panel active">
       <div class="panel-header">
         <h2>Trabalhos</h2>
         <div class="row">
@@ -94,7 +94,7 @@
       </details>
     </section>
 
-    <section id="tab-params" class="panel active">
+    <section id="tab-params" class="panel">
       <div class="panel-header">
         <h2>Parâmetros gerais</h2>
         <p class="hint">Os percentuais são digitados como <strong>%</strong> (ex.: 10 = 10%).</p>
@@ -202,7 +202,7 @@
     <section id="tab-summary" class="panel">
       <div class="panel-header">
         <h2>Resumo</h2>
-        <p class="hint">Soma todos os trabalhos. Itens marcados como “Particular” não entram nos recebíveis.</p>
+        <p class="hint">Soma apenas os trabalhos marcados como “Incluir = SIM”.</p>
       </div>
 
       <div class="grid grid-2">
@@ -259,6 +259,6 @@
     Feito para rodar 100% no navegador (GitHub Pages). Os dados ficam salvos localmente no seu dispositivo.
   </footer>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=20260226_0105"></script>
 </body>
 </html>

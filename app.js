@@ -4,14 +4,14 @@
 const STORAGE_KEY = "custos-impressao-3d-bambulab:v1";
 
 const DEFAULTS = {
-  "version": 3,
+  "version": 2,
   "params": {
     "tarifa_energia": 0.87,
     "custo_impressora": 4999.0,
     "custo_ams": 0.0,
     "vida_util_h": 2000.0,
     "valor_revenda": 4500.0,
-    "mao_de_obra_h": 30.0,
+    "mao_de_obra_h": 10.0,
     "manutencao_h": 2.0,
     "overhead_pct": 0.1,
     "lucro_pct": 0.3,
@@ -176,26 +176,6 @@ function loadState() {
       parsed.version = 2;
     }
 
-
-    // Migração v2 -> v3 (Incluir -> Particular)
-    if (Number(parsed.version || 1) < 3) {
-      if (Array.isArray(parsed.jobs)) {
-        parsed.jobs.forEach(j => {
-          if (j && typeof j === "object") {
-            if (typeof j.particular !== "boolean") {
-              // Se antes o usuário marcava "Incluir = NÃO", consideramos como "Particular"
-              if ("incluir" in j) {
-                j.particular = (j.incluir === false);
-              } else {
-                j.particular = false;
-              }
-            }
-            if ("incluir" in j) delete j.incluir;
-          }
-        });
-      }
-      parsed.version = 3;
-    }
     return parsed;
   } catch {
     return deepClone(DEFAULTS);
@@ -258,7 +238,8 @@ function computeJob(job, params, materialMap) {
 
   const custo_energia = energia_kwh * clampNumber(params.tarifa_energia, 0);
 
-  const mao_de_obra = job.particular ? 0 : (tempo_h * clampNumber(params.mao_de_obra_h, 0));
+  const mao_rate = job.particular ? 0 : clampNumber(params.mao_de_obra_h, 0);
+  const mao_de_obra = tempo_h * mao_rate;
   const depreciacao = tempo_h * clampNumber(params.depreciacao_h, 0);
   const manutencao = tempo_h * clampNumber(params.manutencao_h, 0);
 
@@ -327,6 +308,8 @@ function computeAll() {
   const materialMap = buildMaterialMap(state.materials);
 
   state.jobs = state.jobs.map(j => {
+    const legacyIncluirRaw = (j.incluir ?? (j.ativo ? (String(j.ativo).toUpperCase() === "SIM") : true));
+    const legacyIncluir = (typeof legacyIncluirRaw === "string") ? (String(legacyIncluirRaw).toUpperCase() === "SIM") : (legacyIncluirRaw !== false);
     const job = {
       ...j,
       id: clampNumber(j.id, 0),
@@ -337,7 +320,8 @@ function computeAll() {
       tempo_h: clampNumber(j.tempo_h, 0),
       desconto_factor: clampNumber(j.desconto_factor, 0),
       pago: String(j.pago || "NÃO"),
-      incluir: j.incluir ?? (j.ativo ? (String(j.ativo).toUpperCase() === "SIM") : true),
+            // Particular: não entra em recebíveis (migra: "Incluir = NÃO" -> particular = true)
+      particular: (j.particular != null) ? !!j.particular : !legacyIncluir,
       perda_pct_override: (j.perda_pct_override != null) ? clampNumber(j.perda_pct_override, 0) : null,
       embalagem_override: (j.embalagem_override != null) ? clampNumber(j.embalagem_override, 0) : null,
       data_entrega: j.data_entrega || "",
@@ -389,19 +373,18 @@ function computeSummary() {
   };
 }
 
-function $(sel) { return document.querySelector(sel); }
-function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
 
-
+const qs = (sel, root = document) => root.querySelector(sel);
+const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 function setTab(tabId) {
-  $all(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tabId));
-  $all(".panel").forEach(p => p.classList.toggle("active", p.id === `tab-${tabId}`));
+  qsa(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tabId));
+  qsa(".panel").forEach(p => p.classList.toggle("active", p.id === `tab-${tabId}`));
 }
 
 function renderParams() {
   const p = state.params;
   // Inputs
-  $all("[data-param]").forEach(inp => {
+  qsa("[data-param]").forEach(inp => {
     const key = inp.dataset.param;
     if (!(key in p)) return;
 
@@ -412,12 +395,12 @@ function renderParams() {
     }
   });
 
-  $("#kpiEquipTotal").textContent = fmtBRL(p.custo_total_equip);
-  $("#kpiDepHora").textContent = fmtBRL(p.depreciacao_h) + " /h";
+  qs("#kpiEquipTotal").textContent = fmtBRL(p.custo_total_equip);
+  qs("#kpiDepHora").textContent = fmtBRL(p.depreciacao_h) + " /h";
 }
 
 function renderMaterials() {
-  const tbody = $("#materialsTable tbody");
+  const tbody = qs("#materialsTable tbody");
   tbody.innerHTML = "";
 
   state.materials.forEach((m, idx) => {
@@ -440,9 +423,9 @@ function renderMaterials() {
 }
 
 function renderJobs(materialMap) {
-  const search = ($("#jobSearch").value || "").trim().toLowerCase();
-  const tbody = $("#jobsTable tbody");
-  const tbody2 = $("#jobsDetailsTable tbody");
+  const search = (qs("#jobSearch").value || "").trim().toLowerCase();
+  const tbody = qs("#jobsTable tbody");
+  const tbody2 = qs("#jobsDetailsTable tbody");
   tbody.innerHTML = "";
   tbody2.innerHTML = "";
 
@@ -492,7 +475,7 @@ function renderJobs(materialMap) {
           <option value="ATRASADO">ATRASADO</option>
         </select>
       </td>
-      <td class="num" title="Marque se for um trabalho particular (não entra nos recebíveis)">
+      <td class="center">
         <input class="cell-check" data-j="particular" type="checkbox" ${j.particular ? "checked" : ""} />
       </td>
       <td class="num"><span class="pill">${fmtBRL(d.preco_final)}</span></td>
@@ -508,7 +491,10 @@ function renderJobs(materialMap) {
 
     // set selected options
     tr.querySelector('[data-j="material"]').value = j.material || "";
-    tr.querySelector('[data-j="pago"]').value = j.pago || "NÃO";
+    const pagoSel = tr.querySelector('[data-j="pago"]');
+    pagoSel.value = j.pago || "NÃO";
+    // Se for particular, não faz sentido controlar recebíveis
+    if (j.particular) { pagoSel.value = "NÃO"; pagoSel.disabled = true; }
 
     // Details
     const tr2 = document.createElement("tr");
@@ -533,14 +519,14 @@ function renderJobs(materialMap) {
 
 function renderSummary() {
   const s = computeSummary();
-  $("#sumJobs").textContent = String(s.totalJobs);
-  $("#sumSubtotal").textContent = fmtBRL(s.totalSubtotal);
-  $("#sumOverhead").textContent = fmtBRL(s.totalOverhead);
-  $("#sumSuggested").textContent = fmtBRL(s.totalSuggested);
-  $("#sumNoLabor").textContent = fmtBRL(s.totalNoLabor);
-  $("#sumDue").textContent = fmtBRL(s.totalDue);
-  $("#sumPaid").textContent = fmtBRL(s.totalPaid);
-  $("#sumLate").textContent = fmtBRL(s.totalLate);
+  qs("#sumJobs").textContent = String(s.totalJobs);
+  qs("#sumSubtotal").textContent = fmtBRL(s.totalSubtotal);
+  qs("#sumOverhead").textContent = fmtBRL(s.totalOverhead);
+  qs("#sumSuggested").textContent = fmtBRL(s.totalSuggested);
+  qs("#sumNoLabor").textContent = fmtBRL(s.totalNoLabor);
+  qs("#sumDue").textContent = fmtBRL(s.totalDue);
+  qs("#sumPaid").textContent = fmtBRL(s.totalPaid);
+  qs("#sumLate").textContent = fmtBRL(s.totalLate);
 }
 
 function escapeHtml(str) {
@@ -596,7 +582,7 @@ function addJob() {
     embalagem_override: null,
     desconto_factor: 0, // 0% por padrão
     pago: "NÃO",
-    particular: false,
+    incluir: true,
     data_entrega: "",
     data_pagamento: "",
   });
@@ -661,12 +647,12 @@ function resetAll() {
 
 function wireEvents() {
   // Tabs
-  $all(".tab").forEach(btn => {
+  qsa(".tab").forEach(btn => {
     btn.addEventListener("click", () => setTab(btn.dataset.tab));
   });
 
   // Params
-  $all("[data-param]").forEach(inp => {
+  qsa("[data-param]").forEach(inp => {
     inp.addEventListener("input", () => {
       const key = inp.dataset.param;
       if (!(key in state.params)) return;
@@ -681,7 +667,7 @@ function wireEvents() {
   });
 
   // Materials table (delegation)
-  $("#materialsTable").addEventListener("change", (ev) => {
+  qs("#materialsTable").addEventListener("change", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -705,18 +691,7 @@ function wireEvents() {
     rerender();
   });
 
-  
-
-  // UX: Enter confirma e salva (dispara change via blur)
-  $("#materialsTable").addEventListener("keydown", (ev) => {
-    const target = ev.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (ev.key === "Enter" && (target.matches("input") || target.matches("select"))) {
-      ev.preventDefault();
-      target.blur();
-    }
-  });
-$("#materialsTable").addEventListener("click", (ev) => {
+  qs("#materialsTable").addEventListener("click", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     if (target.dataset.action !== "rm-material") return;
@@ -729,7 +704,7 @@ $("#materialsTable").addEventListener("click", (ev) => {
   });
 
   // Jobs table (delegation)
-  $("#jobsTable").addEventListener("change", (ev) => {
+  qs("#jobsTable").addEventListener("change", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -767,18 +742,7 @@ $("#materialsTable").addEventListener("click", (ev) => {
     rerender();
   });
 
-  
-
-  // UX: Enter confirma e salva (dispara change via blur)
-  $("#jobsTable").addEventListener("keydown", (ev) => {
-    const target = ev.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (ev.key === "Enter" && (target.matches("input") || target.matches("select"))) {
-      ev.preventDefault();
-      target.blur();
-    }
-  });
-$("#jobsTable").addEventListener("click", (ev) => {
+  qs("#jobsTable").addEventListener("click", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const action = target.dataset.action;
@@ -796,7 +760,7 @@ $("#jobsTable").addEventListener("click", (ev) => {
   });
 
   // Jobs details (delivery/payment date overrides)
-  $("#jobsDetailsTable").addEventListener("change", (ev) => {
+  qs("#jobsDetailsTable").addEventListener("change", (ev) => {
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -814,23 +778,34 @@ $("#jobsTable").addEventListener("click", (ev) => {
     rerender();
   });
 
-  // Search
-  $("#jobSearch").addEventListener("input", () => rerender());
+  
+  // Enter confirma (blur) para não re-renderizar a cada tecla (evita "travamento" de inputs)
+  const blurOnEnter = (ev) => {
+    const t = ev.target;
+    if (!(t instanceof HTMLElement)) return;
+    if (ev.key !== "Enter") return;
+    if (t.tagName !== "INPUT" && t.tagName !== "SELECT") return;
+    ev.preventDefault();
+    t.blur();
+  };
+  qs("#materialsTable").addEventListener("keydown", blurOnEnter);
+  qs("#jobsTable").addEventListener("keydown", blurOnEnter);
+  qs("#jobsDetailsTable").addEventListener("keydown", blurOnEnter);
+
+// Search
+  qs("#jobSearch").addEventListener("input", () => rerender());
 
   // Buttons
-  $("#btnAddMaterial").addEventListener("click", addMaterial);
-  $("#btnAddJob").addEventListener("click", addJob);
-  $("#btnExportJson").addEventListener("click", exportJson);
+  qs("#btnAddMaterial").addEventListener("click", addMaterial);
+  qs("#btnAddJob").addEventListener("click", addJob);
+  qs("#btnExportJson").addEventListener("click", exportJson);
 
-  $("#importJsonFile").addEventListener("change", (ev) => {
+  qs("#importJsonFile").addEventListener("change", (ev) => {
     const file = ev.target.files?.[0];
     if (!file) return;
     importJson(file);
     ev.target.value = "";
   });
-
-  const resetBtn = $("#btnReset");
-  if (resetBtn) resetBtn.addEventListener("click", resetAll);
 }
 
 wireEvents();
