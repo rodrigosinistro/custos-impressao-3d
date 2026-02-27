@@ -8,13 +8,20 @@ e replica as fórmulas principais (Parâmetros, Materiais, Trabalhos e Resumo).
 
 ## Como usar
 
-- **Parâmetros**: energia, custo do equipamento, vida útil, mão de obra, manutenção, overhead, lucro e embalagem.
+- **Trabalhos**: lance cada impressão (cliente, projeto, peso, tempo, material). O app calcula custos, “Preço sugerido” e “Preço final”.
+  - **Particular**: aplica 100% de desconto e marca como pago (não entra em recebíveis).
+  - **Não cobrar Mão-de-Obra**: remove apenas o custo de mão-de-obra do cálculo do preço (os demais custos permanecem).
+- **Parâmetros**: configure energia, custo do equipamento, vida útil, mão de obra, manutenção, overhead, lucro e embalagem.
+  - Alterações de parâmetros valem **somente para novos trabalhos** (os trabalhos antigos ficam “congelados” com snapshot).
 - **Materiais**: cadastre filamentos (preço/kg, potência média e desperdício padrão).
-- **Trabalhos**: lance cada impressão (peso, tempo, material). O app calcula custos e sugere preço.
-- **Resumo**: soma apenas os trabalhos marcados como **Incluir = SIM**.
+- **Fornecedores**: registre onde comprou (última compra, avaliação, prazo, frete…).
+- **Clientes**: cadastro simples (nome/endereço) + total automático (soma do preço final dos trabalhos do cliente).
+- **Projetos**: cadastro simples (nome/descrição/link) para selecionar no dropdown.
+- **Resumo**: totais e gráfico mensal (custo sem mão-de-obra, total devido e total recebido).
 
 > Os dados ficam salvos no **localStorage** do navegador (no seu dispositivo).  
 > Use **Exportar JSON** para backup, e **Importar JSON** para restaurar.
+
 
 ---
 

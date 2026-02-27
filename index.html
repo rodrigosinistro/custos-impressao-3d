@@ -14,7 +14,7 @@
 <div class="logo">🧾</div>
 <div class="titles">
 <h1>Custos de Impressão 3D (BambuLab)</h1>
-<p class="subtitle">Trabalhos • Parâmetros • Materiais • Fornecedores • Resumo</p>
+<p class="subtitle">Trabalhos • Parâmetros • Materiais • Fornecedores • Clientes • Projetos • Resumo</p>
 </div>
 </div>
 <div class="actions">
@@ -27,6 +27,8 @@
 <button class="tab active" data-tab="jobs">Trabalhos</button>
 <button class="tab" data-tab="params">Parâmetros</button>
 <button class="tab" data-tab="materials">Materiais</button><button class="tab" data-tab="suppliers">Fornecedores</button>
+<button class="tab" data-tab="clients">Clientes</button>
+<button class="tab" data-tab="projects">Projetos</button>
 <button class="tab" data-tab="summary">Resumo</button>
 </nav>
 <main class="container">
@@ -35,7 +37,7 @@
 <h2>Trabalhos</h2>
 <div class="row">
 <button class="btn" id="btnAddJob">Adicionar trabalho</button>
-<input class="search" id="jobSearch" placeholder="Buscar por projeto/cliente…"/>
+<input class="search" id="jobSearch" placeholder="Buscar por cliente/projeto…"/>
 </div>
 </div>
 <div class="full-bleed">
@@ -45,7 +47,8 @@
 <tr>
 <th class="sticky-left">ID</th>
 <th>Data</th>
-<th>Projeto/Cliente</th>
+<th>Cliente</th>
+<th>Projeto</th>
 <th>Material</th>
 <th class="num">Peso (g)</th>
 <th class="num">Tempo (h)</th>
@@ -207,8 +210,55 @@
 </table>
 </div>
 <p class="hint">Dica: use este cadastro para lembrar onde comprou, quanto pagou e como foi a qualidade do material/entrega.</p>
+
 </section>
-<section class="panel" id="tab-summary">
+<section class="panel" id="tab-clients">
+  <div class="panel-header">
+    <h2>Cadastro de Clientes</h2>
+    <div class="row">
+      <button class="btn" id="btnAddClient">Adicionar cliente</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="clientsTable">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Endereço</th>
+          <th>Contato</th>
+          <th>Observações</th>
+          <th class="num">Total (Preço final) (R$)</th>
+          <th class="sticky-right"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="hint">Os trabalhos usam este cadastro via dropdown. O total é calculado automaticamente somando o “Preço final” de todos os trabalhos do cliente.</p>
+</section>
+<section class="panel" id="tab-projects">
+  <div class="panel-header">
+    <h2>Cadastro de Projetos</h2>
+    <div class="row">
+      <button class="btn" id="btnAddProject">Adicionar projeto</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="projectsTable">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Descrição</th>
+          <th>Link</th>
+          <th class="sticky-right"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="hint">Cadastre seus projetos para selecionar nos trabalhos (dropdown). Você pode colocar links (Drive, GitHub, WhatsApp, etc.).</p>
+
+<section class="panel" id="tab-summary">>
 <div class="panel-header">
 <h2>Resumo</h2>
 

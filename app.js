@@ -4,7 +4,7 @@
 const STORAGE_KEY = "custos-impressao-3d-bambulab:v1";
 
 const DEFAULTS = {
-  "version": 3,
+  "version": 4,
   "params": {
     "tarifa_energia": 0.87,
     "custo_impressora": 4999.0,
@@ -50,8 +50,57 @@ const DEFAULTS = {
       "marca": "",
       "preco_kg": 300.0,
       "custo_g": 0.3,
-      "potencia_w": 150.0,
-      "desperdicio_pct": 0.1
+      "potencia_w": 120.0,
+      "desperdicio_pct": 0.08
+    }
+  ],
+  "clients": [
+    {
+      "id": 1,
+      "nome": "Issac",
+      "endereco": "",
+      "contato": "",
+      "observacoes": ""
+    },
+    {
+      "id": 2,
+      "nome": "Rodrigo",
+      "endereco": "",
+      "contato": "",
+      "observacoes": ""
+    },
+    {
+      "id": 3,
+      "nome": "George",
+      "endereco": "",
+      "contato": "",
+      "observacoes": ""
+    }
+  ],
+  "projects": [
+    {
+      "id": 1,
+      "nome": "Espada Tanjirou",
+      "descricao": "",
+      "link": ""
+    },
+    {
+      "id": 2,
+      "nome": "Coletor",
+      "descricao": "",
+      "link": ""
+    },
+    {
+      "id": 3,
+      "nome": "Defletor",
+      "descricao": "",
+      "link": ""
+    },
+    {
+      "id": 4,
+      "nome": "Override",
+      "descricao": "",
+      "link": ""
     }
   ],
   "suppliers": [],
@@ -59,41 +108,56 @@ const DEFAULTS = {
     {
       "id": 1,
       "data": "2026-03-03",
-      "projeto": "Issac / Espada Tanjirou",
+      "client_id": 1,
+      "project_id": 1,
       "material": "PLA",
       "peso_g": 125.0,
       "tempo_h": 5.0,
       "desconto_factor": 0.8,
       "pago": "NÃO",
-      "incluir": true,
+      "particular": false,
+      "no_labor": false,
+      "perda_pct_override": null,
+      "embalagem_override": null,
       "data_entrega": "",
-      "data_pagamento": ""
+      "data_pagamento": "",
+      "params_snapshot": null
     },
     {
       "id": 2,
       "data": "2026-03-03",
-      "projeto": "Rodrigo / Coletor",
+      "client_id": 2,
+      "project_id": 2,
       "material": "PLA",
       "peso_g": 100.0,
       "tempo_h": 4.0,
       "desconto_factor": 1.0,
       "pago": "NÃO",
-      "incluir": true,
+      "particular": true,
+      "no_labor": false,
+      "perda_pct_override": null,
+      "embalagem_override": null,
       "data_entrega": "",
-      "data_pagamento": ""
+      "data_pagamento": "",
+      "params_snapshot": null
     },
     {
       "id": 3,
       "data": "2026-03-03",
-      "projeto": "Rodrigo / Defletor",
+      "client_id": 2,
+      "project_id": 3,
       "material": "PLA",
       "peso_g": 11.0,
       "tempo_h": 0.5,
       "desconto_factor": 1.0,
       "pago": "NÃO",
-      "incluir": true,
+      "particular": true,
+      "no_labor": false,
+      "perda_pct_override": null,
+      "embalagem_override": null,
       "data_entrega": "",
-      "data_pagamento": ""
+      "data_pagamento": "",
+      "params_snapshot": null
     }
   ]
 };
@@ -204,20 +268,14 @@ function decimalToPercentInput(decimalValue) {
   return clampNumber(decimalValue, 0) * 100;
 }
 
-function loadState() {
+function migrateState(parsed) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return deepClone(DEFAULTS);
-    const parsed = JSON.parse(raw);
-
-    // Migração leve/defensiva
     if (!parsed || typeof parsed !== "object") return deepClone(DEFAULTS);
     if (!parsed.params || !parsed.materials || !parsed.jobs) return deepClone(DEFAULTS);
 
     // Migração v1 -> v2 (ajustes da planilha)
     const v = Number(parsed.version || 1);
     if (v < 2) {
-      // Se o usuário ainda está com o valor antigo/default, corrige para o valor atualizado da planilha
       if (parsed.params && Number(parsed.params.mao_de_obra_h) === 30) {
         parsed.params.mao_de_obra_h = 10;
       }
@@ -229,10 +287,104 @@ function loadState() {
       if (!Array.isArray(parsed.suppliers)) parsed.suppliers = [];
       parsed.version = 3;
     }
-
     if (!Array.isArray(parsed.suppliers)) parsed.suppliers = [];
 
+    // Migração v3 -> v4 (Cadastro de clientes/projetos + dropdown nos trabalhos)
+    if (Number(parsed.version || 3) < 4) {
+      if (!Array.isArray(parsed.clients)) parsed.clients = [];
+      if (!Array.isArray(parsed.projects)) parsed.projects = [];
+
+      const maxId = (arr) => Array.isArray(arr) ? arr.reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0) : 0;
+
+      let nextClientId = maxId(parsed.clients) + 1;
+      let nextProjectId = maxId(parsed.projects) + 1;
+
+      const clientByName = new Map();
+      for (const c of parsed.clients) {
+        const nome = String(c?.nome || "").trim();
+        if (!nome) continue;
+        clientByName.set(nome.toLowerCase(), Number(c.id || 0));
+      }
+
+      const projectByName = new Map();
+      for (const p of parsed.projects) {
+        const nome = String(p?.nome || "").trim();
+        if (!nome) continue;
+        projectByName.set(nome.toLowerCase(), Number(p.id || 0));
+      }
+
+      const splitLegacy = (s) => {
+        const raw = String(s || "").trim();
+        if (!raw) return ["", ""];
+        // padrão mais comum: "Cliente / Projeto"
+        if (raw.includes("/")) {
+          const parts = raw.split("/").map(x => x.trim()).filter(Boolean);
+          if (parts.length >= 2) return [parts[0], parts.slice(1).join(" / ")];
+        }
+        // fallback: tenta " - "
+        if (raw.includes(" - ")) {
+          const parts = raw.split(" - ").map(x => x.trim()).filter(Boolean);
+          if (parts.length >= 2) return [parts[0], parts.slice(1).join(" - ")];
+        }
+        return [raw, ""];
+      };
+
+      const getOrCreateClient = (name) => {
+        const key = String(name || "").trim();
+        if (!key) return null;
+        const k = key.toLowerCase();
+        const found = clientByName.get(k);
+        if (found) return found;
+        const id = nextClientId++;
+        parsed.clients.push({ id, nome: key, endereco: "", contato: "", observacoes: "" });
+        clientByName.set(k, id);
+        return id;
+      };
+
+      const getOrCreateProject = (name) => {
+        const key = String(name || "").trim();
+        if (!key) return null;
+        const k = key.toLowerCase();
+        const found = projectByName.get(k);
+        if (found) return found;
+        const id = nextProjectId++;
+        parsed.projects.push({ id, nome: key, descricao: "", link: "" });
+        projectByName.set(k, id);
+        return id;
+      };
+
+      for (const j of (parsed.jobs || [])) {
+        const hasClient = j.client_id != null && String(j.client_id).trim() !== "";
+        const hasProject = j.project_id != null && String(j.project_id).trim() !== "";
+
+        if (!hasClient && !hasProject) {
+          const legacy = j.projeto || j.projetoCliente || j["Projeto/Cliente"] || "";
+          const [clientName, projectName] = splitLegacy(legacy);
+          const cid = getOrCreateClient(clientName);
+          const pid = getOrCreateProject(projectName);
+          if (cid != null) j.client_id = cid;
+          if (pid != null) j.project_id = pid;
+        }
+      }
+
+      parsed.version = 4;
+    }
+
+    if (!Array.isArray(parsed.clients)) parsed.clients = [];
+    if (!Array.isArray(parsed.projects)) parsed.projects = [];
+
     return parsed;
+  } catch {
+    return deepClone(DEFAULTS);
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return deepClone(DEFAULTS);
+    const parsed = JSON.parse(raw);
+    return migrateState(parsed);
   } catch {
     return deepClone(DEFAULTS);
   }
@@ -364,6 +516,32 @@ function computeAll() {
 
   const materialMap = buildMaterialMap(state.materials);
 
+
+// Normaliza clientes
+if (!Array.isArray(state.clients)) state.clients = [];
+state.clients = state.clients.map(c => ({
+  ...c,
+  id: clampNumber(c.id, 0),
+  nome: String(c.nome || "").trim(),
+  endereco: String(c.endereco || ""),
+  contato: String(c.contato || ""),
+  observacoes: String(c.observacoes || ""),
+})).filter(c => c.id > 0);
+
+state.clients.sort((a, b) => clampNumber(a.id, 0) - clampNumber(b.id, 0));
+
+// Normaliza projetos
+if (!Array.isArray(state.projects)) state.projects = [];
+state.projects = state.projects.map(p => ({
+  ...p,
+  id: clampNumber(p.id, 0),
+  nome: String(p.nome || "").trim(),
+  descricao: String(p.descricao || ""),
+  link: String(p.link || ""),
+})).filter(p => p.id > 0);
+
+state.projects.sort((a, b) => clampNumber(a.id, 0) - clampNumber(b.id, 0));
+
   state.jobs = state.jobs.map(j => {
     const legacyIncluirRaw = (j.incluir ?? (j.ativo ? (String(j.ativo).toUpperCase() === "SIM") : true));
     const legacyIncluir = (typeof legacyIncluirRaw === "string") ? (String(legacyIncluirRaw).toUpperCase() === "SIM") : (legacyIncluirRaw !== false);
@@ -371,6 +549,9 @@ function computeAll() {
       ...j,
       id: clampNumber(j.id, 0),
       data: j.data || "",
+      client_id: (j.client_id != null && String(j.client_id).trim() !== "") ? clampNumber(j.client_id, 0) : null,
+      project_id: (j.project_id != null && String(j.project_id).trim() !== "") ? clampNumber(j.project_id, 0) : null,
+      // legado (somente leitura / migração)
       projeto: String(j.projeto || ""),
       material: String(j.material || ""),
       peso_g: clampNumber(j.peso_g, 0),
@@ -530,7 +711,111 @@ function renderSuppliers() {
 }
 
 
-function renderJobs(materialMap) {
+function renderJobsfunction nextClientId() {
+  return (state.clients || []).reduce((m, c) => Math.max(m, clampNumber(c.id, 0)), 0) + 1;
+}
+
+function addClient() {
+  if (!Array.isArray(state.clients)) state.clients = [];
+  state.clients.push({
+    id: nextClientId(),
+    nome: "",
+    endereco: "",
+    contato: "",
+    observacoes: ""
+  });
+  rerender();
+}
+
+function removeClient(id) {
+  const cid = clampNumber(id, 0);
+  state.clients = (state.clients || []).filter(c => clampNumber(c.id, 0) !== cid);
+  // limpa referência nos trabalhos
+  for (const j of (state.jobs || [])) {
+    if (clampNumber(j.client_id, 0) === cid) j.client_id = null;
+  }
+  rerender();
+}
+
+function renderClients() {
+  const tbody = qs("#clientsTable tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const totals = new Map();
+  for (const j of (state.jobs || [])) {
+    const cid = (j.client_id != null) ? clampNumber(j.client_id, 0) : 0;
+    if (!cid) continue;
+    totals.set(cid, (totals.get(cid) || 0) + clampNumber(j.derived?.preco_final, 0));
+  }
+
+  (state.clients || []).slice().sort((a,b)=>clampNumber(a.id,0)-clampNumber(b.id,0)).forEach(c => {
+    const tr = document.createElement("tr");
+    tr.dataset.id = String(c.id);
+
+    const total = totals.get(clampNumber(c.id,0)) || 0;
+
+    tr.innerHTML = `
+      <td><input class="cell-input" data-c="nome" value="${escapeHtml(c.nome || "")}" placeholder="Nome" /></td>
+      <td><input class="cell-input" data-c="endereco" value="${escapeHtml(c.endereco || "")}" placeholder="Endereço" /></td>
+      <td><input class="cell-input" data-c="contato" value="${escapeHtml(c.contato || "")}" placeholder="Telefone / e-mail" /></td>
+      <td><input class="cell-input" data-c="observacoes" value="${escapeHtml(c.observacoes || "")}" placeholder="Obs." /></td>
+      <td class="num"><span class="pill">${fmtMoney(total)}</span></td>
+      <td class="sticky-right actions-col">
+        <button class="btn danger" data-action="rm-client" title="Remover">Remover</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function nextProjectId() {
+  return (state.projects || []).reduce((m, p) => Math.max(m, clampNumber(p.id, 0)), 0) + 1;
+}
+
+function addProject() {
+  if (!Array.isArray(state.projects)) state.projects = [];
+  state.projects.push({
+    id: nextProjectId(),
+    nome: "",
+    descricao: "",
+    link: ""
+  });
+  rerender();
+}
+
+function removeProject(id) {
+  const pid = clampNumber(id, 0);
+  state.projects = (state.projects || []).filter(p => clampNumber(p.id, 0) !== pid);
+  // limpa referência nos trabalhos
+  for (const j of (state.jobs || [])) {
+    if (clampNumber(j.project_id, 0) === pid) j.project_id = null;
+  }
+  rerender();
+}
+
+function renderProjects() {
+  const tbody = qs("#projectsTable tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  (state.projects || []).slice().sort((a,b)=>clampNumber(a.id,0)-clampNumber(b.id,0)).forEach(p => {
+    const tr = document.createElement("tr");
+    tr.dataset.id = String(p.id);
+
+    tr.innerHTML = `
+      <td><input class="cell-input" data-p="nome" value="${escapeHtml(p.nome || "")}" placeholder="Nome" /></td>
+      <td><input class="cell-input" data-p="descricao" value="${escapeHtml(p.descricao || "")}" placeholder="Descrição" /></td>
+      <td><input class="cell-input" data-p="link" value="${escapeHtml(p.link || "")}" placeholder="https://..." /></td>
+      <td class="sticky-right actions-col">
+        <button class="btn danger" data-action="rm-project" title="Remover">Remover</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+(materialMap) {
   const search = (qs("#jobSearch").value || "").trim().toLowerCase();
   const tbody = qs("#jobsTable tbody");
   const tbody2 = qs("#jobsDetailsTable tbody");
@@ -540,10 +825,25 @@ function renderJobs(materialMap) {
   const materials = state.materials.filter(m => m.material);
   const materialOptions = materials.map(m => `<option value="${escapeHtml(m.material)}">${escapeHtml(m.material)}</option>`).join("");
 
+
+const clients = (state.clients || []).filter(c => c && c.nome);
+const clientMap = new Map(clients.map(c => [Number(c.id), c]));
+const clientOptions = clients.map(c => `<option value="${clampNumber(c.id, 0)}">${escapeHtml(c.nome)}</option>`).join("");
+
+const projects = (state.projects || []).filter(p => p && p.nome);
+const projectMap = new Map(projects.map(p => [Number(p.id), p]));
+const projectOptions = projects.map(p => `<option value="${clampNumber(p.id, 0)}">${escapeHtml(p.nome)}</option>`).join("");
+
   const jobsFiltered = state.jobs
     .slice()
     .sort((a, b) => clampNumber(a.id, 0) - clampNumber(b.id, 0))
-    .filter(j => !search || String(j.projeto || "").toLowerCase().includes(search));
+    .filter(j => {
+      if (!search) return true;
+      const c = clientMap.get(Number(j.client_id))?.nome || "";
+      const p = projectMap.get(Number(j.project_id))?.nome || "";
+      const legacy = String(j.projeto || "");
+      return `${c} ${p} ${legacy}`.toLowerCase().includes(search);
+    });
 
   for (const j of jobsFiltered) {
     const d = j.derived;
@@ -558,7 +858,18 @@ function renderJobs(materialMap) {
     tr.innerHTML = `
       <td class="sticky-left"><span class="pill">#${j.id}</span></td>
       <td><input class="cell-input" data-j="data" type="date" value="${dateISOToInput(j.data)}" /></td>
-      <td><input class="cell-input" data-j="projeto" value="${escapeHtml(j.projeto)}" placeholder="Ex.: Cliente / Projeto" /></td>
+      <td>
+        <select class="cell-input" data-j="client_id">
+          <option value="">—</option>
+          ${clientOptions}
+        </select>
+      </td>
+      <td>
+        <select class="cell-input" data-j="project_id">
+          <option value="">—</option>
+          ${projectOptions}
+        </select>
+      </td>
       <td>
         <select class="cell-input" data-j="material">
           <option value="">—</option>
@@ -602,6 +913,12 @@ function renderJobs(materialMap) {
 
     // set selected options
     tr.querySelector('[data-j="material"]').value = j.material || "";
+
+const clientSel = tr.querySelector('[data-j="client_id"]');
+if (clientSel) clientSel.value = (j.client_id != null) ? String(j.client_id) : "";
+const projectSel = tr.querySelector('[data-j="project_id"]');
+if (projectSel) projectSel.value = (j.project_id != null) ? String(j.project_id) : "";
+
     const pagoSel = tr.querySelector('[data-j="pago"]');
     pagoSel.value = j.pago || "NÃO";
     // Se for particular: 100% desconto e pago = SIM (travado)
@@ -809,6 +1126,8 @@ function rerender() {
   renderParams();
   renderMaterials();
   renderSuppliers();
+  renderClients();
+  renderProjects();
   renderJobs(materialMap);
   renderSummary();
   saveState();
@@ -863,6 +1182,8 @@ function addJob() {
   state.jobs.push({
     id: nextJobId(),
     data: todayISO(),
+    client_id: null,
+    project_id: null,
     projeto: "",
     material: firstMaterial,
     peso_g: 0,
@@ -894,7 +1215,6 @@ function duplicateJob(id) {
   if (i < 0) return;
   const copy = deepClone(state.jobs[i]);
   copy.id = nextJobId();
-  copy.projeto = (copy.projeto || "") + " (cópia)";
   state.jobs.splice(i + 1, 0, copy);
   rerender();
 }
@@ -917,7 +1237,7 @@ function importJson(file) {
     try {
       const parsed = JSON.parse(String(reader.result || ""));
       if (!parsed || typeof parsed !== "object") throw new Error("Arquivo inválido.");
-      state = parsed;
+      state = migrateState(parsed);
       rerender();
     } catch (err) {
       alert("Não consegui importar esse JSON.\n\nDetalhe: " + (err?.message || err));
@@ -1048,6 +1368,67 @@ function wireEvents() {
   });
 
 
+
+// Clients
+qs("#btnAddClient").addEventListener("click", () => addClient());
+
+qs("#clientsTable").addEventListener("change", (ev) => {
+  const target = ev.target;
+  if (!(target instanceof HTMLElement)) return;
+  const tr = target.closest("tr");
+  if (!tr) return;
+  const id = clampNumber(tr.dataset.id, 0);
+  const client = (state.clients || []).find(c => clampNumber(c.id, 0) === id);
+  if (!client) return;
+
+  const key = target.getAttribute("data-c");
+  if (!key) return;
+  client[key] = target.value;
+  rerender();
+});
+
+qs("#clientsTable").addEventListener("click", (ev) => {
+  const target = ev.target;
+  if (!(target instanceof HTMLElement)) return;
+  const action = target.dataset.action;
+  if (action !== "rm-client") return;
+  const tr = target.closest("tr");
+  if (!tr) return;
+  const id = clampNumber(tr.dataset.id, 0);
+  if (!confirm("Remover este cliente?")) return;
+  removeClient(id);
+});
+
+// Projects
+qs("#btnAddProject").addEventListener("click", () => addProject());
+
+qs("#projectsTable").addEventListener("change", (ev) => {
+  const target = ev.target;
+  if (!(target instanceof HTMLElement)) return;
+  const tr = target.closest("tr");
+  if (!tr) return;
+  const id = clampNumber(tr.dataset.id, 0);
+  const proj = (state.projects || []).find(p => clampNumber(p.id, 0) === id);
+  if (!proj) return;
+
+  const key = target.getAttribute("data-p");
+  if (!key) return;
+  proj[key] = target.value;
+  rerender();
+});
+
+qs("#projectsTable").addEventListener("click", (ev) => {
+  const target = ev.target;
+  if (!(target instanceof HTMLElement)) return;
+  const action = target.dataset.action;
+  if (action !== "rm-project") return;
+  const tr = target.closest("tr");
+  if (!tr) return;
+  const id = clampNumber(tr.dataset.id, 0);
+  if (!confirm("Remover este projeto?")) return;
+  removeProject(id);
+});
+
   // Jobs table (delegation)
   qs("#jobsTable").addEventListener("change", (ev) => {
     const target = ev.target;
@@ -1062,7 +1443,8 @@ function wireEvents() {
     if (!key) return;
 
     if (key === "data") job.data = inputToDateISO(target.value);
-    if (key === "projeto") job.projeto = target.value;
+    if (key === "client_id") job.client_id = String(target.value || "").trim() === "" ? null : clampNumber(target.value, 0);
+    if (key === "project_id") job.project_id = String(target.value || "").trim() === "" ? null : clampNumber(target.value, 0);
     if (key === "material") job.material = target.value;
     if (key === "peso_g") job.peso_g = clampNumber(target.value, 0);
     if (key === "tempo_h") job.tempo_h = clampNumber(target.value, 0);
