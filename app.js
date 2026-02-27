@@ -711,7 +711,7 @@ function renderSuppliers() {
 }
 
 
-function renderJobsfunction nextClientId() {
+function nextClientId() {
   return (state.clients || []).reduce((m, c) => Math.max(m, clampNumber(c.id, 0)), 0) + 1;
 }
 
@@ -815,7 +815,7 @@ function renderProjects() {
   });
 }
 
-(materialMap) {
+function renderJobs(materialMap) {
   const search = (qs("#jobSearch").value || "").trim().toLowerCase();
   const tbody = qs("#jobsTable tbody");
   const tbody2 = qs("#jobsDetailsTable tbody");
