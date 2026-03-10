@@ -8,6 +8,18 @@ e replica as fórmulas principais (Parâmetros, Materiais, Trabalhos e Resumo).
 
 ## Como usar
 
+
+## Controle de acesso (v0.12)
+
+- A área pública agora é a aba **Cadastro**, com um formulário simples para o cliente se registrar.
+- O envio público salva diretamente no cadastro interno de **Clientes** e mostra a mensagem **Cadastrado com Sucesso**.
+- **Clientes, Trabalhos, Parâmetros, Materiais, Fornecedores, Projetos e Resumo** só aparecem após login de administrador.
+- **Exportar JSON** e **Importar JSON** também ficam restritos ao administrador.
+
+> Importante: como este projeto roda 100% no navegador e pode ser publicado no **GitHub Pages**, esse login é um **bloqueio de interface no front-end**. Ele não substitui uma autenticação real de servidor.
+
+---
+
 - **Trabalhos**: lance cada impressão (cliente, projeto, peso, tempo, material). O app calcula custos, “Preço sugerido” e “Preço final”.
   - **Particular**: aplica 100% de desconto e marca como pago (não entra em recebíveis).
   - **Não cobrar Mão-de-Obra**: remove apenas o custo de mão-de-obra do cálculo do preço (os demais custos permanecem).
@@ -57,3 +69,11 @@ Se você quiser, eu posso evoluir o app para:
 - Campos adicionais (pintura, pós-processamento, frete, impostos, etc.)
 - “Modo planilha”: mais colunas e visual idêntico ao Excel
 
+
+
+## Atualização v0.12
+
+- Área pública convertida em formulário de cadastro do cliente.
+- Aba **Clientes** agora fica disponível apenas para o administrador.
+- Cadastro público salva diretamente na base local do app e mostra confirmação **Cadastrado com Sucesso**.
+- Todas as abas internas continuam protegidas por login ADM (`ADM` / `Rod@301613`).

@@ -2,6 +2,12 @@
 // Baseado na planilha XLSX fornecida. Tudo roda no navegador (GitHub Pages).
 
 const STORAGE_KEY = "custos-impressao-3d-bambulab:v1";
+const AUTH_STORAGE_KEY = "custos-impressao-3d-bambulab:admin-session:v1";
+const ADMIN_USERNAME = "ADM";
+const ADMIN_PASSWORD = "Rod@301613";
+const PUBLIC_TAB_ID = "register";
+const DEFAULT_ADMIN_TAB_ID = "jobs";
+const ADMIN_ONLY_TABS = new Set(["jobs", "params", "materials", "suppliers", "clients", "projects", "summary"]);
 
 const DEFAULTS = {
   "version": 4,
@@ -400,6 +406,103 @@ function saveState() {
 
 let state = loadState();
 
+function isAdminAuthenticated() {
+  try {
+    return sessionStorage.getItem(AUTH_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setAdminAuthenticated(value) {
+  try {
+    if (value) {
+      sessionStorage.setItem(AUTH_STORAGE_KEY, "1");
+    } else {
+      sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function requireAdminAccess(message = "Faça login como administrador para acessar esta área.") {
+  if (isAdminAuthenticated()) return true;
+  alert(message);
+  openAdminLoginModal(message);
+  return false;
+}
+
+function isTabAccessible(tabId) {
+  return !ADMIN_ONLY_TABS.has(tabId) || isAdminAuthenticated();
+}
+
+function normalizeRequestedTab(tabId) {
+  const requested = String(tabId || "").trim() || PUBLIC_TAB_ID;
+  if (isTabAccessible(requested)) return requested;
+  return isAdminAuthenticated() ? DEFAULT_ADMIN_TAB_ID : PUBLIC_TAB_ID;
+}
+
+function setLoginMessage(message, type = "info") {
+  const el = qs("#adminLoginMessage");
+  if (!el) return;
+  el.textContent = message || "";
+  el.dataset.state = type;
+}
+
+function openAdminLoginModal(message = "Entre com o usuário administrador para liberar as abas internas.") {
+  const modal = qs("#adminLoginModal");
+  if (!modal) return;
+  modal.hidden = false;
+  setLoginMessage(message, "info");
+  const userInput = qs("#adminUsername");
+  const passInput = qs("#adminPassword");
+  if (userInput) userInput.value = "";
+  if (passInput) passInput.value = "";
+  if (userInput) userInput.focus();
+}
+
+function closeAdminLoginModal() {
+  const modal = qs("#adminLoginModal");
+  if (!modal) return;
+  modal.hidden = true;
+}
+
+function syncAuthUI() {
+  const admin = isAdminAuthenticated();
+  const authStatus = qs("#authStatus");
+  const adminTools = qs("#adminTools");
+  const loginBtn = qs("#btnAdminLogin");
+  const logoutBtn = qs("#btnAdminLogout");
+  const addClientBtn = qs("#btnAddClient");
+
+  if (authStatus) {
+    authStatus.textContent = admin ? "Modo administrador" : "Modo público";
+    authStatus.dataset.state = admin ? "admin" : "public";
+  }
+  if (adminTools) adminTools.hidden = !admin;
+  if (loginBtn) loginBtn.hidden = admin;
+  if (logoutBtn) logoutBtn.hidden = !admin;
+  if (addClientBtn) addClientBtn.hidden = !admin;
+
+  qsa(".tab").forEach((tabBtn) => {
+    const adminOnly = tabBtn.dataset.adminOnly === "true";
+    tabBtn.hidden = adminOnly && !admin;
+  });
+
+  qsa(".panel").forEach((panel) => {
+    const tabId = String(panel.id || "").replace(/^tab-/, "");
+    const adminOnly = ADMIN_ONLY_TABS.has(tabId);
+    panel.hidden = adminOnly && !admin;
+  });
+
+  const activeTab = qs(".tab.active")?.dataset.tab || PUBLIC_TAB_ID;
+  const normalizedTab = normalizeRequestedTab(activeTab);
+  if (normalizedTab !== activeTab || !isTabAccessible(activeTab)) {
+    setTab(normalizedTab);
+  }
+}
+
 function buildMaterialMap(materials) {
   const map = new Map();
   for (const m of materials) {
@@ -626,8 +729,16 @@ function computeSummary() {
 const qs = (sel, root = document) => root.querySelector(sel);
 const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 function setTab(tabId) {
-  qsa(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tabId));
-  qsa(".panel").forEach(p => p.classList.toggle("active", p.id === `tab-${tabId}`));
+  const safeTabId = normalizeRequestedTab(tabId);
+  qsa(".tab").forEach((b) => {
+    const isActive = b.dataset.tab === safeTabId;
+    b.classList.toggle("active", isActive);
+    if (b.hidden && isActive) b.classList.remove("active");
+  });
+  qsa(".panel").forEach((p) => {
+    const isActive = p.id === `tab-${safeTabId}` && !p.hidden;
+    p.classList.toggle("active", isActive);
+  });
 }
 
 function renderParams() {
@@ -716,6 +827,7 @@ function nextClientId() {
 }
 
 function addClient() {
+  if (!requireAdminAccess()) return;
   if (!Array.isArray(state.clients)) state.clients = [];
   state.clients.push({
     id: nextClientId(),
@@ -727,7 +839,43 @@ function addClient() {
   rerender();
 }
 
+function setPublicClientFeedback(message = "", type = "info") {
+  const el = qs("#publicClientFeedback");
+  if (!el) return;
+  el.textContent = message || "";
+  el.dataset.state = type;
+  el.hidden = !message;
+}
+
+function submitPublicClientRegistration(form) {
+  const nome = String(form?.querySelector('[name="nome"]')?.value || "").trim();
+  const endereco = String(form?.querySelector('[name="endereco"]')?.value || "").trim();
+  const contato = String(form?.querySelector('[name="contato"]')?.value || "").trim();
+  const observacoes = String(form?.querySelector('[name="observacoes"]')?.value || "").trim();
+
+  if (!nome) {
+    setPublicClientFeedback("Informe pelo menos o nome para concluir o cadastro.", "error");
+    form?.querySelector('[name="nome"]')?.focus();
+    return;
+  }
+
+  if (!Array.isArray(state.clients)) state.clients = [];
+  state.clients.push({
+    id: nextClientId(),
+    nome,
+    endereco,
+    contato,
+    observacoes,
+  });
+
+  saveState();
+  renderClients();
+  form?.reset();
+  setPublicClientFeedback("Cadastrado com Sucesso.", "success");
+}
+
 function removeClient(id) {
+  if (!requireAdminAccess()) return;
   const cid = clampNumber(id, 0);
   state.clients = (state.clients || []).filter(c => clampNumber(c.id, 0) !== cid);
   // limpa referência nos trabalhos
@@ -769,11 +917,13 @@ function renderClients() {
   });
 }
 
+
 function nextProjectId() {
   return (state.projects || []).reduce((m, p) => Math.max(m, clampNumber(p.id, 0)), 0) + 1;
 }
 
 function addProject() {
+  if (!requireAdminAccess()) return;
   if (!Array.isArray(state.projects)) state.projects = [];
   state.projects.push({
     id: nextProjectId(),
@@ -785,6 +935,7 @@ function addProject() {
 }
 
 function removeProject(id) {
+  if (!requireAdminAccess()) return;
   const pid = clampNumber(id, 0);
   state.projects = (state.projects || []).filter(p => clampNumber(p.id, 0) !== pid);
   // limpa referência nos trabalhos
@@ -1122,6 +1273,7 @@ function escapeHtml(str) {
 }
 
 function rerender() {
+  syncAuthUI();
   const materialMap = computeAll();
   renderParams();
   renderMaterials();
@@ -1139,6 +1291,7 @@ function nextJobId() {
 }
 
 function addSupplier() {
+  if (!requireAdminAccess()) return;
   if (!Array.isArray(state.suppliers)) state.suppliers = [];
   state.suppliers.push({
     nome: "",
@@ -1155,12 +1308,14 @@ function addSupplier() {
 }
 
 function removeSupplier(idx) {
+  if (!requireAdminAccess()) return;
   if (!Array.isArray(state.suppliers)) state.suppliers = [];
   state.suppliers.splice(idx, 1);
   rerender();
 }
 
 function addMaterial() {
+  if (!requireAdminAccess()) return;
   state.materials.push({
     material: "NOVO",
     marca: "",
@@ -1173,11 +1328,13 @@ function addMaterial() {
 }
 
 function removeMaterial(idx) {
+  if (!requireAdminAccess()) return;
   state.materials.splice(idx, 1);
   rerender();
 }
 
 function addJob() {
+  if (!requireAdminAccess()) return;
   const firstMaterial = state.materials.find(m => m.material)?.material || "";
   state.jobs.push({
     id: nextJobId(),
@@ -1203,6 +1360,7 @@ function addJob() {
 
 
 function removeJob(id) {
+  if (!requireAdminAccess()) return;
   const i = state.jobs.findIndex(j => j.id === id);
   if (i >= 0) {
     state.jobs.splice(i, 1);
@@ -1211,6 +1369,7 @@ function removeJob(id) {
 }
 
 function duplicateJob(id) {
+  if (!requireAdminAccess()) return;
   const i = state.jobs.findIndex(j => j.id === id);
   if (i < 0) return;
   const copy = deepClone(state.jobs[i]);
@@ -1220,6 +1379,7 @@ function duplicateJob(id) {
 }
 
 function exportJson() {
+  if (!requireAdminAccess("Faça login como administrador para exportar o backup em JSON.")) return;
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -1232,6 +1392,7 @@ function exportJson() {
 }
 
 function importJson(file) {
+  if (!requireAdminAccess("Faça login como administrador para importar um backup em JSON.")) return;
   const reader = new FileReader();
   reader.onload = () => {
     try {
@@ -1266,6 +1427,7 @@ function wireEvents() {
   // Params
   qsa("[data-param]").forEach(inp => {
     const commit = () => {
+      if (!requireAdminAccess()) return;
       const key = inp.dataset.param;
       if (!(key in state.params)) return;
 
@@ -1290,6 +1452,7 @@ function wireEvents() {
 
   // Materials table (delegation)
   qs("#materialsTable").addEventListener("change", (ev) => {
+    if (!requireAdminAccess()) return;
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -1314,6 +1477,7 @@ function wireEvents() {
   });
 
   qs("#materialsTable").addEventListener("click", (ev) => {
+    if (!requireAdminAccess()) return;
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     if (target.dataset.action !== "rm-material") return;
@@ -1328,6 +1492,7 @@ function wireEvents() {
   // Suppliers table (delegation)
   const suppliersTable = qs("#suppliersTable");
   if (suppliersTable) suppliersTable.addEventListener("change", (ev) => {
+    if (!requireAdminAccess()) return;
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -1356,6 +1521,7 @@ function wireEvents() {
   });
 
   if (suppliersTable) suppliersTable.addEventListener("click", (ev) => {
+    if (!requireAdminAccess()) return;
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     if (target.dataset.action !== "rm-supplier") return;
@@ -1373,6 +1539,7 @@ function wireEvents() {
 qs("#btnAddClient").addEventListener("click", () => addClient());
 
 qs("#clientsTable").addEventListener("change", (ev) => {
+  if (!requireAdminAccess()) return;
   const target = ev.target;
   if (!(target instanceof HTMLElement)) return;
   const tr = target.closest("tr");
@@ -1388,6 +1555,7 @@ qs("#clientsTable").addEventListener("change", (ev) => {
 });
 
 qs("#clientsTable").addEventListener("click", (ev) => {
+  if (!requireAdminAccess()) return;
   const target = ev.target;
   if (!(target instanceof HTMLElement)) return;
   const action = target.dataset.action;
@@ -1403,6 +1571,7 @@ qs("#clientsTable").addEventListener("click", (ev) => {
 qs("#btnAddProject").addEventListener("click", () => addProject());
 
 qs("#projectsTable").addEventListener("change", (ev) => {
+  if (!requireAdminAccess()) return;
   const target = ev.target;
   if (!(target instanceof HTMLElement)) return;
   const tr = target.closest("tr");
@@ -1418,6 +1587,7 @@ qs("#projectsTable").addEventListener("change", (ev) => {
 });
 
 qs("#projectsTable").addEventListener("click", (ev) => {
+  if (!requireAdminAccess()) return;
   const target = ev.target;
   if (!(target instanceof HTMLElement)) return;
   const action = target.dataset.action;
@@ -1431,6 +1601,7 @@ qs("#projectsTable").addEventListener("click", (ev) => {
 
   // Jobs table (delegation)
   qs("#jobsTable").addEventListener("change", (ev) => {
+    if (!requireAdminAccess()) return;
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -1505,6 +1676,7 @@ qs("#projectsTable").addEventListener("click", (ev) => {
   });
 
   qs("#jobsTable").addEventListener("click", (ev) => {
+    if (!requireAdminAccess()) return;
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const action = target.dataset.action;
@@ -1523,6 +1695,7 @@ qs("#projectsTable").addEventListener("click", (ev) => {
 
   // Jobs details (delivery/payment date overrides)
   qs("#jobsDetailsTable").addEventListener("change", (ev) => {
+    if (!requireAdminAccess()) return;
     const target = ev.target;
     if (!(target instanceof HTMLElement)) return;
     const tr = target.closest("tr");
@@ -1560,6 +1733,49 @@ qs("#projectsTable").addEventListener("click", (ev) => {
   qs("#jobsTable").addEventListener("keydown", blurOnEnter);
   qs("#jobsDetailsTable").addEventListener("keydown", blurOnEnter);
 
+  const btnAdminLogin = qs("#btnAdminLogin");
+  if (btnAdminLogin) btnAdminLogin.addEventListener("click", () => openAdminLoginModal());
+
+  const btnAdminLogout = qs("#btnAdminLogout");
+  if (btnAdminLogout) btnAdminLogout.addEventListener("click", () => {
+    setAdminAuthenticated(false);
+    closeAdminLoginModal();
+    syncAuthUI();
+    setTab(PUBLIC_TAB_ID);
+    rerender();
+  });
+
+  const btnCloseAdminModal = qs("#btnCloseAdminModal");
+  if (btnCloseAdminModal) btnCloseAdminModal.addEventListener("click", closeAdminLoginModal);
+
+  const adminLoginModal = qs("#adminLoginModal");
+  if (adminLoginModal) adminLoginModal.addEventListener("click", (ev) => {
+    if (ev.target === adminLoginModal) closeAdminLoginModal();
+  });
+
+  const publicClientForm = qs("#publicClientForm");
+  if (publicClientForm) publicClientForm.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    submitPublicClientRegistration(publicClientForm);
+  });
+
+  const adminLoginForm = qs("#adminLoginForm");
+  if (adminLoginForm) adminLoginForm.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const username = String(qs("#adminUsername")?.value || "").trim();
+    const password = String(qs("#adminPassword")?.value || "");
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      setAdminAuthenticated(true);
+      setLoginMessage("Login realizado com sucesso.", "success");
+      closeAdminLoginModal();
+      syncAuthUI();
+      setTab(DEFAULT_ADMIN_TAB_ID);
+      rerender();
+      return;
+    }
+    setLoginMessage("Usuário ou senha inválidos.", "error");
+  });
+
 // Search
   qs("#jobSearch").addEventListener("input", () => rerender());
 
@@ -1579,7 +1795,8 @@ qs("#projectsTable").addEventListener("click", (ev) => {
 }
 
 wireEvents();
+syncAuthUI();
+setTab(isAdminAuthenticated() ? DEFAULT_ADMIN_TAB_ID : PUBLIC_TAB_ID);
 rerender();
-
 
 window.addEventListener("resize", () => renderSummaryChart());

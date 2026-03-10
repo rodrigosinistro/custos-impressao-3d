@@ -14,25 +14,31 @@
 <div class="logo">🧾</div>
 <div class="titles">
 <h1>Custos de Impressão 3D (BambuLab)</h1>
-<p class="subtitle">Trabalhos • Parâmetros • Materiais • Fornecedores • Clientes • Projetos • Resumo</p>
+<p class="subtitle">Cadastro público do cliente • Painel interno protegido por login ADM</p>
 </div>
 </div>
 <div class="actions">
+<div class="auth-status" id="authStatus">Modo público</div>
+<div class="admin-tools" id="adminTools" hidden>
 <button class="btn" id="btnExportJson">Exportar JSON</button>
 <label class="btn ghost" for="importJsonFile">Importar JSON</label>
 <input accept="application/json" hidden="" id="importJsonFile" type="file"/>
 </div>
+<button class="btn" id="btnAdminLogin">Login ADM</button>
+<button class="btn ghost" id="btnAdminLogout" hidden>Sair</button>
+</div>
 </header>
 <nav aria-label="Navegação" class="tabs">
-<button class="tab active" data-tab="jobs">Trabalhos</button>
-<button class="tab" data-tab="params">Parâmetros</button>
-<button class="tab" data-tab="materials">Materiais</button><button class="tab" data-tab="suppliers">Fornecedores</button>
-<button class="tab" data-tab="clients">Clientes</button>
-<button class="tab" data-tab="projects">Projetos</button>
-<button class="tab" data-tab="summary">Resumo</button>
+<button class="tab" data-tab="jobs" data-admin-only="true">Trabalhos</button>
+<button class="tab" data-tab="params" data-admin-only="true">Parâmetros</button>
+<button class="tab" data-tab="materials" data-admin-only="true">Materiais</button><button class="tab" data-tab="suppliers" data-admin-only="true">Fornecedores</button>
+<button class="tab active" data-tab="register">Cadastro</button>
+<button class="tab" data-tab="clients" data-admin-only="true">Clientes</button>
+<button class="tab" data-tab="projects" data-admin-only="true">Projetos</button>
+<button class="tab" data-tab="summary" data-admin-only="true">Resumo</button>
 </nav>
 <main class="container">
-<section class="panel active" id="tab-jobs">
+<section class="panel" id="tab-jobs">
 <div class="panel-header">
 <h2>Trabalhos</h2>
 <div class="row">
@@ -212,6 +218,38 @@
 <p class="hint">Dica: use este cadastro para lembrar onde comprou, quanto pagou e como foi a qualidade do material/entrega.</p>
 
 </section>
+<section class="panel active" id="tab-register">
+  <div class="panel-header">
+    <h2>Cadastro do Cliente</h2>
+    <div class="row">
+      <span class="hint">Preencha seus dados e clique em salvar. O cadastro fica disponível somente no painel administrativo.</span>
+    </div>
+  </div>
+  <div class="register-shell">
+    <div class="card register-card">
+      <h3>Quero me cadastrar</h3>
+      <p class="hint register-copy">Este formulário é público e serve apenas para registrar novos clientes. Orçamentos, trabalhos, materiais e demais informações continuam visíveis somente para o administrador.</p>
+      <form class="form" id="publicClientForm">
+        <label>Nome completo *
+          <input id="publicClientNome" name="nome" autocomplete="name" placeholder="Digite seu nome" required type="text"/>
+        </label>
+        <label>Endereço
+          <input id="publicClientEndereco" name="endereco" autocomplete="street-address" placeholder="Rua, número, bairro" type="text"/>
+        </label>
+        <label>Contato
+          <input id="publicClientContato" name="contato" autocomplete="email" placeholder="Telefone, e-mail ou WhatsApp" type="text"/>
+        </label>
+        <label>Observações
+          <input id="publicClientObservacoes" name="observacoes" placeholder="Ex.: preferência de contato, referência do pedido" type="text"/>
+        </label>
+        <div class="row register-actions">
+          <button class="btn" id="btnPublicClientSave" type="submit">Salvar cadastro</button>
+        </div>
+        <p class="hint register-feedback" id="publicClientFeedback" hidden></p>
+      </form>
+    </div>
+  </div>
+</section>
 <section class="panel" id="tab-clients">
   <div class="panel-header">
     <h2>Cadastro de Clientes</h2>
@@ -323,9 +361,30 @@
 
 </section>
 </main>
+
+<div class="modal" id="adminLoginModal" hidden>
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Login de Administrador</h3>
+      <button class="btn ghost" id="btnCloseAdminModal" type="button">Fechar</button>
+    </div>
+    <form class="form" id="adminLoginForm">
+      <label>Usuário
+        <input id="adminUsername" autocomplete="username" placeholder="ADM" type="text"/>
+      </label>
+      <label>Senha
+        <input id="adminPassword" autocomplete="current-password" placeholder="Senha" type="password"/>
+      </label>
+      <p class="hint" id="adminLoginMessage">Entre com o usuário administrador para liberar as abas internas.</p>
+      <div class="row modal-actions">
+        <button class="btn" type="submit">Entrar</button>
+      </div>
+    </form>
+  </div>
+</div>
 <footer class="footer">
     Feito para rodar 100% no navegador (GitHub Pages). Os dados ficam salvos localmente no seu dispositivo.
   </footer>
-<script src="app.js?v=20260227_0001" defer></script>
+<script src="app.js?v=20260309_0002" defer></script>
 </body>
 </html>

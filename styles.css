@@ -323,3 +323,107 @@ input:focus, select:focus{ border-color: rgba(106,167,255,.5); }
 
 /* Tabela de fornecedores */
 #suppliersTable{ min-width: 1200px; }
+
+
+ .admin-tools[hidden],
+.modal[hidden]{ display:none !important; }
+
+.auth-status{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(231,237,245,.05);
+  font-size: 12px;
+  font-weight: 700;
+}
+.auth-status[data-state="admin"]{
+  border-color: rgba(77,212,167,.35);
+  background: rgba(77,212,167,.12);
+}
+.auth-status[data-state="public"]{
+  border-color: rgba(106,167,255,.25);
+  background: rgba(106,167,255,.12);
+}
+
+.public-value{
+  display:block;
+  min-height: 38px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(231,237,245,.10);
+  background: rgba(231,237,245,.03);
+  line-height: 1.4;
+}
+
+.modal{
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 8, 12, .72);
+  backdrop-filter: blur(8px);
+  z-index: 30;
+}
+.modal-card{
+  width: min(100%, 460px);
+  background: rgba(18,27,39,.96);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+.modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.modal-actions{ justify-content:flex-end; }
+#adminLoginMessage[data-state="error"]{ color: #ff9a9a; }
+#adminLoginMessage[data-state="success"]{ color: #7ee0bf; }
+
+@media (max-width: 980px){
+  .topbar{ align-items:flex-start; }
+  .actions{ width: 100%; justify-content:flex-start; }
+}
+
+
+.register-shell{
+  max-width: 760px;
+}
+.register-card{
+  padding: 18px;
+}
+.register-card h3{
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+.register-copy{
+  margin-bottom: 14px;
+}
+.register-actions{
+  justify-content:flex-start;
+  margin-top: 4px;
+}
+.register-feedback{
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(231,237,245,.12);
+  background: rgba(231,237,245,.04);
+}
+.register-feedback[data-state="success"]{
+  color: #7ee0bf;
+  border-color: rgba(77,212,167,.32);
+  background: rgba(77,212,167,.10);
+}
+.register-feedback[data-state="error"]{
+  color: #ffb1b1;
+  border-color: rgba(255,106,106,.32);
+  background: rgba(255,106,106,.10);
+}
