@@ -66,6 +66,4 @@ export function buildQuoteShareText(quote) {
     quote.notes ? `Observações: ${quote.notes}` : '',
   ]
     .filter(Boolean)
-    .join('
-');
-}
+    .join('\n');
