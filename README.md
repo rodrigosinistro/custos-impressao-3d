@@ -1,24 +1,39 @@
-Versão atual: v1.1.5
+Versão atual: v1.1.6
 
-# Custos de Impressão 3D (BambuLab) — Web App com Supabase (v1.1.3)
+# Custos de Impressão 3D (GitHub Pages + Supabase)
 
-**Versão atual:** `v1.1.3`
-Este projeto foi preparado para o repositório **rodrigosinistro/custos-impressao-3d** e para publicação em:
+**Versão atual:** `v1.1.6`
+
+Projeto preparado para:
 
 - Repositório: `https://github.com/rodrigosinistro/custos-impressao-3d`
 - Pages: `https://rodrigosinistro.github.io/custos-impressao-3d/`
-
-Agora o app usa **GitHub Pages no frontend** e **Supabase no banco/auth**, sem armazenamento local como base principal.
+- Supabase: `https://lvmnwvxdjknfcbiypwpd.supabase.co`
 
 ## O que esta versão faz
 
 - login real com **Supabase Auth**
-- proteção dos dados com **Row Level Security (RLS)**
+- proteção com **Row Level Security (RLS)**
 - cadastro público de clientes indo para o banco
 - CRUD de clientes, impressoras e materiais
 - cálculo de orçamento com histórico salvo no banco
+- preço final ao cliente com ajuste automático para baixo no padrão **x9,99**
+- campo de **preço manual** e campo de **desconto em reais**
+- botão para **editar orçamento** no histórico
 - exportação de snapshot JSON dos dados do usuário logado
-- estrutura em camadas simples: `app / core / data / domain / features`
+
+## Importante nesta versão
+
+Depois de subir esta versão, rode novamente no **SQL Editor** do Supabase o arquivo:
+
+```text
+supabase/schema.sql
+```
+
+Isso é necessário para:
+
+- criar a função `register_public_client`
+- atualizar a tabela `quotes` com os novos campos de ajuste e desconto
 
 ## Requisitos
 
@@ -37,18 +52,6 @@ No painel do Supabase, abra o **SQL Editor** e rode o conteúdo de:
 supabase/schema.sql
 ```
 
-Esse arquivo cria:
-
-- `profiles`
-- `site_settings`
-- `clients`
-- `printers`
-- `materials`
-- `quotes`
-- índices
-- triggers
-- políticas RLS
-
 ### 2) Crie o primeiro usuário admin
 
 No Supabase:
@@ -57,22 +60,11 @@ No Supabase:
 - `Users`
 - `Add user`
 
-Crie um usuário com e-mail e senha.
-
-O trigger do schema cria automaticamente:
-
-- o registro em `profiles`
-- o registro inicial em `site_settings`
-
-O schema deixa novos usuários com role padrão `admin`, porque este projeto foi montado para uso administrativo direto. Se no futuro você criar mais contas, ajuste a coluna `role` na tabela `profiles` conforme necessário.
-
-### 3) Preencha o `config.js`
-
-Abra o arquivo `config.js` e troque os placeholders:
+### 3) Confira o `config.js`
 
 ```js
 window.APP_CONFIG = {
-  SUPABASE_URL: 'https://SEU-PROJETO.supabase.co',
+  SUPABASE_URL: 'https://lvmnwvxdjknfcbiypwpd.supabase.co',
   SUPABASE_ANON_KEY: 'SUA_CHAVE_ANON_OU_PUBLISHABLE',
   APP_NAME: 'Custos de Impressão 3D',
   REPOSITORY_URL: 'https://github.com/rodrigosinistro/custos-impressao-3d',
@@ -80,59 +72,6 @@ window.APP_CONFIG = {
 };
 ```
 
-### 4) Publique no GitHub Pages
-
-Você pode usar uma destas duas formas:
-
-#### Opção A — Deploy from branch
-
-- envie os arquivos para a branch `main`
-- em **Settings > Pages**:
-  - Source: `Deploy from a branch`
-  - Branch: `main`
-  - Folder: `/ (root)`
-
-#### Opção B — GitHub Actions
-
-Já existe um workflow em:
-
-```text
-.github/workflows/pages.yml
-```
-
 ## Observações de segurança
 
-A chave **anon/publishable** pode ficar no frontend quando o projeto usa **RLS** corretamente, mas a **service_role** nunca deve ir para o navegador. Como o GitHub Pages hospeda apenas arquivos estáticos, o banco e a autenticação ficam fora dele, no Supabase.
-
-## Estrutura do projeto
-
-```text
-assets/
-  favicon.svg
-  styles.css
-src/
-  app/
-  core/
-  data/
-  domain/
-  features/
-  lib/
-supabase/
-  schema.sql
-config.js
-index.html
-README.md
-changelog.md
-```
-
-## Migração do repositório atual
-
-Se o seu repositório ainda tiver arquivos antigos como `app.js` e `app-main.js`, você pode removê-los depois de subir esta nova versão. O novo `index.html` já aponta para `src/main.js`.
-
-## Próximas melhorias sugeridas
-
-- edição de registros existentes
-- exclusão com confirmação modal
-- geração de PDF do orçamento
-- status do orçamento (`aberto`, `aprovado`, `entregue`)
-- upload de imagens/projetos no Supabase Storage
+A chave **anon/publishable** pode ficar no frontend quando o projeto usa **RLS** corretamente. A **service_role** nunca deve ser exposta no navegador.

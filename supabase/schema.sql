@@ -106,6 +106,18 @@ create table if not exists public.quotes (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+alter table public.quotes add column if not exists calculated_final_price numeric(12,2) not null default 0;
+alter table public.quotes add column if not exists adjusted_price numeric(12,2) not null default 0;
+alter table public.quotes add column if not exists manual_adjusted_price numeric(12,2);
+alter table public.quotes add column if not exists discount_amount numeric(12,2) not null default 0;
+
+update public.quotes
+set
+  calculated_final_price = coalesce(nullif(calculated_final_price, 0), final_price),
+  adjusted_price = coalesce(nullif(adjusted_price, 0), final_price),
+  discount_amount = coalesce(discount_amount, 0)
+where calculated_final_price = 0 or adjusted_price = 0 or discount_amount is null;
+
 create index if not exists idx_clients_owner_id on public.clients(owner_id);
 create index if not exists idx_printers_owner_id on public.printers(owner_id);
 create index if not exists idx_materials_owner_id on public.materials(owner_id);
@@ -144,6 +156,59 @@ begin
   return new;
 end;
 $$;
+
+create or replace function public.register_public_client(
+  p_owner_id uuid,
+  p_name text,
+  p_email text default null,
+  p_phone text default null,
+  p_whatsapp text default null,
+  p_notes text default null
+)
+returns public.clients
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_settings public.site_settings;
+  v_client public.clients;
+begin
+  select *
+    into v_settings
+  from public.site_settings
+  where owner_id = p_owner_id
+    and allow_public_client_signup = true
+  limit 1;
+
+  if v_settings.owner_id is null then
+    raise exception 'Cadastro público indisponível para esta conta.';
+  end if;
+
+  insert into public.clients (
+    owner_id,
+    name,
+    email,
+    phone,
+    whatsapp,
+    notes,
+    source
+  ) values (
+    p_owner_id,
+    trim(p_name),
+    nullif(trim(p_email), ''),
+    nullif(trim(p_phone), ''),
+    nullif(trim(p_whatsapp), ''),
+    nullif(trim(p_notes), ''),
+    'public_form'
+  )
+  returning * into v_client;
+
+  return v_client;
+end;
+$$;
+
+grant execute on function public.register_public_client(uuid, text, text, text, text, text) to anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

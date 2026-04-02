@@ -1,3 +1,14 @@
+function roundMoney(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+export function roundDownToNineNinetyNine(value) {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+  if (numeric < 9.99) return roundMoney(numeric);
+  return roundMoney(Math.floor((numeric - 9.99) / 10) * 10 + 9.99);
+}
+
 export function calculateQuote(input) {
   const weightG = Number(input.weightG || 0);
   const printTimeMinutes = Number(input.printTimeMinutes || 0);
@@ -15,6 +26,16 @@ export function calculateQuote(input) {
   const profitMargin = Number(input.profitMargin || 0);
   const taxRate = Number(input.taxRate || 0);
   const cardFeeRate = Number(input.cardFeeRate || 0);
+  const discountAmount = Math.max(0, Number(input.discountAmount || 0));
+
+  const hasManualAdjustedPrice = !(
+    input.manualAdjustedPrice === null ||
+    input.manualAdjustedPrice === undefined ||
+    String(input.manualAdjustedPrice).trim() === ''
+  );
+  const manualAdjustedPrice = hasManualAdjustedPrice
+    ? Math.max(0, Number(input.manualAdjustedPrice || 0))
+    : null;
 
   const printHours = printTimeMinutes / 60;
   const costMaterial = weightG * costPerG;
@@ -37,20 +58,28 @@ export function calculateQuote(input) {
   const costWithFailure = baseCost * (1 + failureRate / 100);
   const priceWithProfit = costWithFailure * (1 + profitMargin / 100);
   const priceWithTax = priceWithProfit * (1 + taxRate / 100);
-  const finalPrice = priceWithTax * (1 + cardFeeRate / 100);
+  const calculatedFinalPrice = priceWithTax * (1 + cardFeeRate / 100);
+  const suggestedPrice = roundDownToNineNinetyNine(calculatedFinalPrice);
+  const adjustedPrice = manualAdjustedPrice !== null ? manualAdjustedPrice : suggestedPrice;
+  const finalPrice = Math.max(0, adjustedPrice - discountAmount);
   const expectedProfit = finalPrice - costWithFailure;
 
   return {
-    costMaterial,
-    costEnergy,
-    costDepreciation,
-    costMaintenance,
-    baseCost,
-    costWithFailure,
-    priceWithProfit,
-    priceWithTax,
-    finalPrice,
-    expectedProfit,
+    costMaterial: roundMoney(costMaterial),
+    costEnergy: roundMoney(costEnergy),
+    costDepreciation: roundMoney(costDepreciation),
+    costMaintenance: roundMoney(costMaintenance),
+    baseCost: roundMoney(baseCost),
+    costWithFailure: roundMoney(costWithFailure),
+    priceWithProfit: roundMoney(priceWithProfit),
+    priceWithTax: roundMoney(priceWithTax),
+    calculatedFinalPrice: roundMoney(calculatedFinalPrice),
+    suggestedPrice: roundMoney(suggestedPrice),
+    manualAdjustedPrice: manualAdjustedPrice !== null ? roundMoney(manualAdjustedPrice) : null,
+    adjustedPrice: roundMoney(adjustedPrice),
+    discountAmount: roundMoney(discountAmount),
+    finalPrice: roundMoney(finalPrice),
+    expectedProfit: roundMoney(expectedProfit),
   };
 }
 
@@ -62,6 +91,7 @@ export function buildQuoteShareText(quote) {
     `Impressora: ${quote.printerName || '-'}`,
     `Peso: ${quote.weightG} g`,
     `Tempo: ${quote.printTimeMinutes} min`,
+    quote.discountFormatted ? `Desconto: ${quote.discountFormatted}` : '',
     `Preço final: ${quote.finalPriceFormatted}`,
     quote.notes ? `Observações: ${quote.notes}` : '',
   ]
