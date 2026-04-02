@@ -1,21 +1,12 @@
 # Changelog
 
-## v0.12 - 2026-03-09
+## v1.1.0 - 2026-04-01
 
-- Criada a aba pública **Cadastro** para o cliente se registrar sem acessar o painel interno.
-- A aba **Clientes** passou a ser restrita ao administrador, junto das demais abas internas.
-- Novo formulário público salva nome, endereço, contato e observações direto no cadastro de clientes.
-- Adicionada mensagem de confirmação **Cadastrado com Sucesso** após envio do formulário.
-- Mantido o login administrativo com usuário `ADM` e senha `Rod@301613`.
-
-## v0.11
-- Aba **Clientes** permanece pública.
-- Abas **Trabalhos, Parâmetros, Materiais, Fornecedores, Projetos** e **Resumo** agora só aparecem após login de administrador.
-- Adicionado botão de **Login ADM / Sair** no topo da interface.
-- No modo público, a aba **Clientes** fica em **somente leitura**.
-- No modo público, **endereço, contato e observações** dos clientes ficam ocultos.
-- Ferramentas administrativas de **Exportar/Importar JSON** ficam visíveis apenas para administrador.
-- Sessão administrativa persiste durante a aba aberta/reloads via `sessionStorage`.
-
-## Observação importante
-Este projeto continua sendo um **site estático** para GitHub Pages. O login implementado é um **bloqueio de interface no front-end**, não uma autenticação segura de servidor.
+- migração da persistência local para **Supabase**
+- autenticação real via **Supabase Auth**
+- criação de schema SQL completo com **RLS**
+- cadastro público de clientes salvo no banco
+- telas administrativas para clientes, impressoras, materiais, orçamentos e configurações
+- exportação de snapshot JSON a partir do banco
+- adaptação do projeto para o repositório `rodrigosinistro/custos-impressao-3d`
+- manutenção da publicação via **GitHub Pages** com frontend estático

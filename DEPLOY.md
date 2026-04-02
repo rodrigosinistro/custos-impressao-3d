@@ -1,13 +1,18 @@
-# Publicar no GitHub Pages
+# Deploy e publicação
 
-Este repositório é um site estático (HTML/CSS/JS). Você pode publicar de 2 formas:
+## Repositório alvo
 
-## Opção 1 — Deploy from branch (mais simples)
-GitHub → Settings → Pages → Source: **Deploy from a branch**  
-Branch: **main** / Folder: **/ (root)**
+- GitHub: https://github.com/rodrigosinistro/custos-impressao-3d
+- Pages: https://rodrigosinistro.github.io/custos-impressao-3d/
 
-## Opção 2 — GitHub Actions
-Se você já usa um workflow de Pages, mantenha-o.  
-Se não usa, você pode criar um em `.github/workflows/pages.yml` (template padrão do GitHub Pages).
+## Passos
 
-> Dica: após atualizar arquivos, faça hard refresh no navegador (Ctrl+F5).
+1. Execute `supabase/schema.sql` no seu projeto Supabase.
+2. Crie o primeiro usuário em `Authentication > Users`.
+3. Edite `config.js` com a URL e a chave anon/publishable.
+4. Suba os arquivos para a branch `main` do repositório.
+5. Ative o GitHub Pages pela raiz da branch `main`, ou use o workflow já incluído.
+
+## Observação importante
+
+O arquivo `config.js` deve ficar publicado junto do site, porque o frontend precisa da URL do Supabase e da chave anon/publishable. Nunca use `service_role` nesse arquivo.
