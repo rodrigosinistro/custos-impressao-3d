@@ -9,9 +9,19 @@ const state = {
 };
 
 let authSubscription = null;
+let initPromise = null;
+
+function snapshot() {
+  return JSON.stringify({
+    userId: state.user?.id ?? null,
+    accessToken: state.session?.access_token ?? null,
+    role: state.profile?.role ?? null,
+  });
+}
 
 function notify() {
-  listeners.forEach((listener) => listener(getState()));
+  const current = getState();
+  listeners.forEach((listener) => listener(current));
 }
 
 async function loadProfile() {
@@ -19,15 +29,38 @@ async function loadProfile() {
     state.profile = null;
     return null;
   }
+
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', state.user.id)
     .maybeSingle();
+
   if (error) throw error;
   state.profile = data || null;
   return state.profile;
+}
+
+async function applySession(session, { notifyListeners = true } = {}) {
+  const before = snapshot();
+
+  state.session = session ?? null;
+  state.user = session?.user ?? null;
+
+  try {
+    await loadProfile();
+  } catch (error) {
+    console.error(error);
+    state.profile = null;
+  }
+
+  const after = snapshot();
+  if (notifyListeners && before !== after) {
+    notify();
+  }
+
+  return getState();
 }
 
 export function getState() {
@@ -43,42 +76,54 @@ export const authService = {
   getState,
 
   async initialize() {
-    if (!authSubscription) {
-      const supabase = getSupabase();
-      const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        state.session = session;
-        state.user = session?.user ?? null;
-        try {
-          await loadProfile();
-        } catch (error) {
-          console.error(error);
-          state.profile = null;
-        }
-        notify();
-      });
-      authSubscription = data.subscription;
-    }
+    if (initPromise) return initPromise;
 
-    if (!state.initialized) {
+    initPromise = (async () => {
       const supabase = getSupabase();
-      const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
-      state.session = data.session;
-      state.user = data.session?.user ?? null;
-      await loadProfile();
-      state.initialized = true;
+
+      if (!authSubscription) {
+        const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          if (!state.initialized) {
+            state.session = session ?? null;
+            state.user = session?.user ?? null;
+            try {
+              await loadProfile();
+            } catch (error) {
+              console.error(error);
+              state.profile = null;
+            }
+            return;
+          }
+
+          await applySession(session, { notifyListeners: true });
+        });
+        authSubscription = data.subscription;
+      }
+
+      if (!state.initialized) {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        state.initialized = true;
+        await applySession(data.session, { notifyListeners: false });
+      }
+
+      return getState();
+    })();
+
+    try {
+      return await initPromise;
+    } finally {
+      initPromise = null;
     }
-    return getState();
   },
 
   async login(email, password) {
     const supabase = getSupabase();
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    state.session = data.session;
-    state.user = data.user;
-    await loadProfile();
-    notify();
+
+    await applySession(data.session, { notifyListeners: false });
     return data;
   },
 
@@ -86,10 +131,8 @@ export const authService = {
     const supabase = getSupabase();
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    state.session = null;
-    state.user = null;
-    state.profile = null;
-    notify();
+
+    await applySession(null, { notifyListeners: true });
   },
 
   async refreshProfile() {
