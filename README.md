@@ -1,5 +1,6 @@
-# Custos de Impressão 3D (BambuLab) — Web App com Supabase
+# Custos de Impressão 3D (BambuLab) — Web App com Supabase (v1.1.3)
 
+**Versão atual:** `v1.1.3`
 Este projeto foi preparado para o repositório **rodrigosinistro/custos-impressao-3d** e para publicação em:
 
 - Repositório: `https://github.com/rodrigosinistro/custos-impressao-3d`

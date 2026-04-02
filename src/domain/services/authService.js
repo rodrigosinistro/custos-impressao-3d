@@ -40,6 +40,8 @@ export function getState() {
 }
 
 export const authService = {
+  getState,
+
   async initialize() {
     if (!authSubscription) {
       const supabase = getSupabase();

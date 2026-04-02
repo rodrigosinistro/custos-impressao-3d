@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.3 - 2026-04-02
+- Corrigido `authService.getState is not a function` ao expor `getState` dentro do objeto `authService`.
+- Entrega consolidada em ZIP completo atualizado para publicação no GitHub Pages.
+
 ## v1.1.1 - 2026-04-02
 - Corrigido erro de sintaxe em `src/domain/services/quoteCalculator.js` que deixava a tela em branco no GitHub Pages.
 - Ajustado o texto de compartilhamento do orçamento para usar quebra de linha válida (`\n`).
