@@ -16,3 +16,7 @@
 ## Observação importante
 
 O arquivo `config.js` deve ficar publicado junto do site, porque o frontend precisa da URL do Supabase e da chave anon/publishable. Nunca use `service_role` nesse arquivo.
+
+
+## Migração recomendada para a v1.1.7
+Se o banco já estava em uso antes desta versão, rode também o arquivo `supabase/migrations/v1.1.7-public-signup-and-quotes.sql` no SQL Editor do Supabase para habilitar o cadastro público e persistir os novos campos de ajuste/desconto dos orçamentos.

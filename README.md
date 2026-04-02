@@ -1,3 +1,5 @@
+> Versão atual: v1.1.7
+
 Versão atual: v1.1.6
 
 # Custos de Impressão 3D (GitHub Pages + Supabase)

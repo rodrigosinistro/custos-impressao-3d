@@ -1,3 +1,8 @@
+## v1.1.7
+- Corrige o cadastro público com fallback para insert direto e mensagem clara de migração SQL quando o banco ainda não recebeu a policy/função.
+- Corrige o erro ao salvar orçamento quando as colunas novas ainda não existem no banco, com fallback compatível ao schema antigo.
+- Adiciona migração dedicada em `supabase/migrations/v1.1.7-public-signup-and-quotes.sql`.
+
 # Changelog
 
 ## v1.1.6
