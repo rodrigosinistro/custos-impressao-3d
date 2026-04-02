@@ -82,20 +82,19 @@ export const authService = {
       const supabase = getSupabase();
 
       if (!authSubscription) {
-        const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data } = supabase.auth.onAuthStateChange((_event, session) => {
           if (!state.initialized) {
             state.session = session ?? null;
             state.user = session?.user ?? null;
-            try {
-              await loadProfile();
-            } catch (error) {
-              console.error(error);
-              state.profile = null;
-            }
+            state.profile = null;
             return;
           }
 
-          await applySession(session, { notifyListeners: true });
+          queueMicrotask(() => {
+            applySession(session, { notifyListeners: true }).catch((error) => {
+              console.error(error);
+            });
+          });
         });
         authSubscription = data.subscription;
       }

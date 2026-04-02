@@ -1,3 +1,5 @@
+Versão atual: v1.1.5
+
 # Custos de Impressão 3D (BambuLab) — Web App com Supabase (v1.1.3)
 
 **Versão atual:** `v1.1.3`
