@@ -1,9 +1,15 @@
-## v1.1.7
-- Corrige o cadastro público com fallback para insert direto e mensagem clara de migração SQL quando o banco ainda não recebeu a policy/função.
-- Corrige o erro ao salvar orçamento quando as colunas novas ainda não existem no banco, com fallback compatível ao schema antigo.
-- Adiciona migração dedicada em `supabase/migrations/v1.1.7-public-signup-and-quotes.sql`.
-
 # Changelog
+
+## v1.1.8
+- Removido o compartilhamento automático ao salvar orçamento.
+- Ajustada a mensagem de compartilhamento para um texto mais amigável e focado no valor final ao cliente.
+- Adicionado compartilhamento com a imagem/logo da Perfeitos Presentes quando o navegador suportar envio de arquivos.
+- Aplicada a logo da Perfeitos Presentes na interface do sistema.
+- Atualizado `config.js` para a configuração atual do projeto no GitHub Pages + Supabase.
+
+## v1.1.7
+- Corrigido o cadastro público e o fallback de salvamento de orçamento para schemas antigos.
+- Adicionado arquivo de migração `supabase/migrations/v1.1.7-public-signup-and-quotes.sql`.
 
 ## v1.1.6
 - Corrigido o cadastro público de clientes usando a função RPC `register_public_client` no Supabase.
@@ -12,18 +18,3 @@
 - O valor mostrado como `Preço final ao cliente` agora é o valor salvo e compartilhado com o cliente.
 - Adicionado botão de editar no histórico de orçamentos.
 - Atualizado `supabase/schema.sql` com a função de cadastro público e com novas colunas em `quotes` para preço calculado, preço ajustado e desconto.
-
-## v1.1.5
-- Corrigido travamento na tela "Sincronizando com o banco..." causado pela inicialização assíncrona do auth no callback do Supabase.
-- Ajustado o listener de autenticação para evitar bloqueio na primeira leitura de sessão.
-- Mantido o projeto completo pronto para GitHub Pages + Supabase.
-
-## v1.1.4
-- Corrigido travamento em “Sincronizando com o banco...” com inicialização do auth mais estável.
-- Evitado loop de renderização causado por múltiplos eventos iniciais do Supabase Auth.
-- Atualizado `config.js` do projeto com a URL do Supabase, repositório e Pages informados pelo usuário.
-- Mantida a versão completa do projeto pronta para GitHub Pages.
-
-## v1.1.3
-- Corrigido `authService.getState is not a function`.
-- Declarada a versão em README, changelog e VERSION.txt.

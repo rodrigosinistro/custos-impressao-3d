@@ -57,6 +57,14 @@ button { cursor: pointer; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
+
+.brand-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
 .brand h1 { margin: 0; font-size: 1.08rem; }
 .brand p { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
 

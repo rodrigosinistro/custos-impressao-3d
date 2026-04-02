@@ -1,6 +1,5 @@
 -- Custos de Impressão 3D - schema Supabase
 -- Execute este arquivo no SQL Editor do Supabase.
--- Se já estiver em produção, você também pode rodar apenas: supabase/migrations/v1.1.7-public-signup-and-quotes.sql
 
 create extension if not exists pgcrypto;
 

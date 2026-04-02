@@ -17,11 +17,11 @@ export function renderShell({ currentHash, title, subtitle, content, settings })
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-logo">
-            <img src="./assets/favicon.svg" alt="Logo" width="28" height="28" />
+            <img src="./assets/perfeitos-presentes-logo.png" alt="Logo Perfeitos Presentes" class="brand-logo-image" />
           </div>
           <div>
             <h1>${escapeHtml(settings?.public_app_name || 'Custos de Impressão 3D')}</h1>
-            <p>GitHub Pages + Supabase</p>
+            <p>Perfeitos Presentes • GitHub Pages + Supabase</p>
           </div>
         </div>
 

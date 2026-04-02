@@ -1,4 +1,5 @@
 import { clientsRepository } from '../../data/repositories/clientsRepository.js';
+import { getAppConfig } from '../../lib/supabaseClient.js';
 import { printersRepository } from '../../data/repositories/printersRepository.js';
 import { materialsRepository } from '../../data/repositories/materialsRepository.js';
 import { quotesRepository } from '../../data/repositories/quotesRepository.js';
@@ -167,10 +168,11 @@ export async function attachQuotesEvents(refresh) {
   const formTitle = qs('#quoteFormTitle');
   const saveButton = qs('#saveQuoteButton');
 
-  const [clients, printers, materials] = await Promise.all([
+  const [clients, printers, materials, settings] = await Promise.all([
     clientsRepository.getAll(),
     printersRepository.getAll(),
     materialsRepository.getAll(),
+    settingsRepository.getMine(),
   ]);
 
   const resetFormState = () => {
@@ -300,25 +302,8 @@ export async function attachQuotesEvents(refresh) {
         expected_profit: payload.result.expectedProfit,
       });
 
-      feedback.innerHTML = `<div class="notice success">${quoteId ? 'Orçamento atualizado com sucesso.' : 'Orçamento salvo com sucesso.'}</div>`;
+      feedback.innerHTML = `<div class="notice success">${quoteId ? 'Orçamento atualizado com sucesso.' : 'Orçamento salvo com sucesso.'} Use o botão <b>Compartilhar</b> no histórico quando quiser enviar ao cliente.</div>`;
       await refresh();
-
-      const shareText = buildQuoteShareText({
-        ...saved,
-        pieceName: saved.piece_name,
-        clientName: saved.client_name,
-        materialName: saved.material_name,
-        printerName: saved.printer_name,
-        weightG: saved.weight_g,
-        printTimeMinutes: saved.print_time_minutes,
-        finalPriceFormatted: formatCurrency(saved.final_price),
-        discountFormatted: saved.discount_amount ? formatCurrency(saved.discount_amount) : '',
-      });
-      if (navigator.share) {
-        try {
-          await navigator.share({ title: 'Orçamento 3D', text: shareText });
-        } catch (_) {}
-      }
     } catch (error) {
       feedback.innerHTML = `<div class="alert">${error.message || 'Não foi possível salvar o orçamento.'}</div>`;
     }
@@ -343,29 +328,48 @@ export async function attachQuotesEvents(refresh) {
     }
   });
 
+
+  async function buildSharePayload(quote) {
+    const appConfig = getAppConfig();
+    const brandName = settings?.public_app_name || appConfig.APP_NAME || 'Perfeitos Presentes';
+    const shareText = buildQuoteShareText({
+      brandName,
+      pieceName: quote.piece_name,
+      finalPriceFormatted: formatCurrency(quote.final_price),
+    });
+
+    const sharePayload = {
+      title: `${brandName} • Orçamento`,
+      text: shareText,
+    };
+
+    try {
+      const response = await fetch('./assets/perfeitos-presentes-logo.png');
+      if (response.ok) {
+        const blob = await response.blob();
+        const file = new File([blob], 'perfeitos-presentes-logo.png', { type: blob.type || 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          sharePayload.files = [file];
+        }
+      }
+    } catch (_) {}
+
+    return sharePayload;
+  }
+
   on('[data-share-quote]', 'click', async (_, button) => {
     try {
       const quote = await quotesRepository.getById(button.dataset.shareQuote);
       if (!quote) return;
-      const shareText = buildQuoteShareText({
-        pieceName: quote.piece_name,
-        clientName: quote.client_name,
-        materialName: quote.material_name,
-        printerName: quote.printer_name,
-        weightG: quote.weight_g,
-        printTimeMinutes: quote.print_time_minutes,
-        finalPriceFormatted: formatCurrency(quote.final_price),
-        discountFormatted: quote.discount_amount ? formatCurrency(quote.discount_amount) : '',
-        notes: quote.notes,
-      });
+      const sharePayload = await buildSharePayload(quote);
       if (navigator.share) {
         try {
-          await navigator.share({ title: 'Orçamento 3D', text: shareText });
+          await navigator.share(sharePayload);
           return;
         } catch (_) {}
       }
-      await navigator.clipboard.writeText(shareText);
-      alert('Texto do orçamento copiado para a área de transferência.');
+      await navigator.clipboard.writeText(sharePayload.text);
+      alert('Mensagem do orçamento copiada para a área de transferência.');
     } catch (error) {
       alert(error.message || 'Não foi possível compartilhar o orçamento.');
     }

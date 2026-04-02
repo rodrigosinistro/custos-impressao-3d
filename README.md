@@ -1,10 +1,6 @@
-> Versão atual: v1.1.7
-
-Versão atual: v1.1.6
-
 # Custos de Impressão 3D (GitHub Pages + Supabase)
 
-**Versão atual:** `v1.1.6`
+**Versão atual:** `v1.1.8`
 
 Projeto preparado para:
 
@@ -22,58 +18,31 @@ Projeto preparado para:
 - preço final ao cliente com ajuste automático para baixo no padrão **x9,99**
 - campo de **preço manual** e campo de **desconto em reais**
 - botão para **editar orçamento** no histórico
-- exportação de snapshot JSON dos dados do usuário logado
-
-## Importante nesta versão
-
-Depois de subir esta versão, rode novamente no **SQL Editor** do Supabase o arquivo:
-
-```text
-supabase/schema.sql
-```
-
-Isso é necessário para:
-
-- criar a função `register_public_client`
-- atualizar a tabela `quotes` com os novos campos de ajuste e desconto
+- compartilhamento manual apenas no orçamento salvo
+- mensagem de compartilhamento amigável com o **valor final ao cliente**
+- compartilhamento da logo da **Perfeitos Presentes** quando suportado pelo navegador
 
 ## Requisitos
 
 - 1 projeto no Supabase
-- executar o arquivo `supabase/schema.sql`
-- criar pelo menos 1 usuário em **Authentication > Users** no Supabase
-- preencher o arquivo `config.js`
+- schema já executado no SQL Editor
+- pelo menos 1 usuário em **Authentication > Users** no Supabase
+- `config.js` preenchido
 
-## Configuração rápida
-
-### 1) Execute o schema
-
-No painel do Supabase, abra o **SQL Editor** e rode o conteúdo de:
-
-```text
-supabase/schema.sql
-```
-
-### 2) Crie o primeiro usuário admin
-
-No Supabase:
-
-- `Authentication`
-- `Users`
-- `Add user`
-
-### 3) Confira o `config.js`
+## Configuração atual do projeto
 
 ```js
 window.APP_CONFIG = {
   SUPABASE_URL: 'https://lvmnwvxdjknfcbiypwpd.supabase.co',
-  SUPABASE_ANON_KEY: 'SUA_CHAVE_ANON_OU_PUBLISHABLE',
-  APP_NAME: 'Custos de Impressão 3D',
+  SUPABASE_ANON_KEY: 'SUA_CHAVE_PUBLISHABLE',
+  APP_NAME: 'Perfeitos Presentes',
   REPOSITORY_URL: 'https://github.com/rodrigosinistro/custos-impressao-3d',
   PAGES_URL: 'https://rodrigosinistro.github.io/custos-impressao-3d/'
 };
 ```
 
-## Observações de segurança
+## Observações
 
-A chave **anon/publishable** pode ficar no frontend quando o projeto usa **RLS** corretamente. A **service_role** nunca deve ser exposta no navegador.
+- Ao salvar um orçamento, o sistema **não compartilha automaticamente**.
+- O botão **Compartilhar** envia a mensagem somente quando você clicar no orçamento salvo.
+- Se o navegador suportar compartilhamento de arquivos, a logo da Perfeitos Presentes acompanha a mensagem.

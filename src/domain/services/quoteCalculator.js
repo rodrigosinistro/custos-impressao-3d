@@ -84,17 +84,16 @@ export function calculateQuote(input) {
 }
 
 export function buildQuoteShareText(quote) {
+  const brandName = quote.brandName || 'Perfeitos Presentes';
+  const pieceLabel = quote.pieceName ? ` para "${quote.pieceName}"` : '';
+
   return [
-    `Orçamento: ${quote.pieceName}`,
-    `Cliente: ${quote.clientName || 'Não informado'}`,
-    `Material: ${quote.materialName || '-'}`,
-    `Impressora: ${quote.printerName || '-'}`,
-    `Peso: ${quote.weightG} g`,
-    `Tempo: ${quote.printTimeMinutes} min`,
-    quote.discountFormatted ? `Desconto: ${quote.discountFormatted}` : '',
-    `Preço final: ${quote.finalPriceFormatted}`,
-    quote.notes ? `Observações: ${quote.notes}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+    `Olá! Obrigado por escolher a ${brandName}. 💝`,
+    '',
+    `Segue abaixo o valor do seu orçamento${pieceLabel}:`,
+    '',
+    `Valor final ao cliente: ${quote.finalPriceFormatted}`,
+    '',
+    'Se quiser confirmar o pedido ou tirar qualquer dúvida, é só me chamar.',
+  ].join('\n');
 }
