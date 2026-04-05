@@ -336,6 +336,8 @@ export async function attachQuotesEvents(refresh) {
       brandName,
       pieceName: quote.piece_name,
       finalPriceFormatted: formatCurrency(quote.final_price),
+      storeUrl: 'https://loja.infinitepay.io/perfeitos_presentes',
+      instagramHandle: '@perfeitos.presentes',
     });
 
     const sharePayload = {

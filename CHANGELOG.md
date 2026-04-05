@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.9
+- Atualizado o texto de compartilhamento do orçamento com a mensagem exata solicitada pela Perfeitos Presentes.
+- Adicionado o link da loja e o Instagram `@perfeitos.presentes` na mensagem compartilhada.
+- Mantido o compartilhamento focado apenas no valor final ao cliente.
+
 ## v1.1.8
 - Removido o compartilhamento automático ao salvar orçamento.
 - Ajustada a mensagem de compartilhamento para um texto mais amigável e focado no valor final ao cliente.

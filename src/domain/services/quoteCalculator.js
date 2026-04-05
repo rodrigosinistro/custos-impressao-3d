@@ -85,14 +85,21 @@ export function calculateQuote(input) {
 
 export function buildQuoteShareText(quote) {
   const brandName = quote.brandName || 'Perfeitos Presentes';
-  const pieceLabel = quote.pieceName ? ` para "${quote.pieceName}"` : '';
+  const pieceName = quote.pieceName || 'sua peça';
+  const storeUrl = quote.storeUrl || 'https://loja.infinitepay.io/perfeitos_presentes';
+  const instagramHandle = quote.instagramHandle || '@perfeitos.presentes';
 
   return [
     `Olá! Obrigado por escolher a ${brandName}. 💝`,
     '',
-    `Segue abaixo o valor do seu orçamento${pieceLabel}:`,
+    `Segue abaixo o valor do seu orçamento para "${pieceName}":`,
     '',
-    `Valor final ao cliente: ${quote.finalPriceFormatted}`,
+    `Valor: ${quote.finalPriceFormatted}`,
+    '',
+    'Conheça mais do nosso trabalho no nosso site e Instagram:',
+    '',
+    storeUrl,
+    `Instagram: ${instagramHandle}`,
     '',
     'Se quiser confirmar o pedido ou tirar qualquer dúvida, é só me chamar.',
   ].join('\n');
