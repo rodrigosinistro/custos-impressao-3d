@@ -1,3 +1,6 @@
+## v1.1.10
+- Texto de compartilhamento ajustado exatamente para o formato solicitado pelo usuário, incluindo "Nossa Loja:" e o valor do campo Preço final ao cliente.
+
 # Changelog
 
 ## v1.1.9
