@@ -5,9 +5,17 @@
 - GitHub: https://github.com/rodrigosinistro/custos-impressao-3d
 - Pages: https://rodrigosinistro.github.io/custos-impressao-3d/
 
-## Passos
+## Atualização para v1.1.11
 
-1. Execute `supabase/schema.sql` no seu projeto Supabase.
+1. Abra o Supabase do projeto.
+2. Vá em **SQL Editor**.
+3. Execute `supabase/migrations/v1.1.11-production.sql`.
+4. Suba todos os arquivos deste pacote para a branch `main` do repositório.
+5. Aguarde o GitHub Pages publicar a nova versão.
+
+## Instalação nova
+
+1. Execute `supabase/schema.sql` completo no SQL Editor do Supabase.
 2. Crie o primeiro usuário em `Authentication > Users`.
 3. Edite `config.js` com a URL e a chave anon/publishable.
 4. Suba os arquivos para a branch `main` do repositório.

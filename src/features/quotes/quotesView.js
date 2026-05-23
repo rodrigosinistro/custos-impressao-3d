@@ -3,6 +3,7 @@ import { getAppConfig } from '../../lib/supabaseClient.js';
 import { printersRepository } from '../../data/repositories/printersRepository.js';
 import { materialsRepository } from '../../data/repositories/materialsRepository.js';
 import { quotesRepository } from '../../data/repositories/quotesRepository.js';
+import { productionRepository } from '../../data/repositories/productionRepository.js';
 import { settingsRepository } from '../../data/repositories/settingsRepository.js';
 import { calculateQuote, buildQuoteShareText } from '../../domain/services/quoteCalculator.js';
 import { formatCurrency, formatDateTime, formatMinutes } from '../../core/utils/format.js';
@@ -145,6 +146,7 @@ export async function renderQuotesView() {
                   <td>
                     <div class="button-row">
                       <button class="btn btn-secondary" data-edit-quote="${quote.id}">Editar</button>
+                      <button class="btn btn-success" data-approve-quote="${quote.id}">Aprovar e produzir</button>
                       <button class="btn btn-secondary" data-share-quote="${quote.id}">Compartilhar</button>
                       <button class="btn btn-danger" data-remove-quote="${quote.id}">Excluir</button>
                     </div>
@@ -325,6 +327,20 @@ export async function attachQuotesEvents(refresh) {
       refresh();
     } catch (error) {
       alert(error.message || 'Não foi possível excluir o orçamento.');
+    }
+  });
+
+  on('[data-approve-quote]', 'click', async (_, button) => {
+    try {
+      const quote = await quotesRepository.getById(button.dataset.approveQuote);
+      if (!quote) return;
+      const result = await productionRepository.createFromQuote(quote);
+      alert(result.alreadyExisted
+        ? 'Este orçamento já estava na fila de produção.'
+        : 'Orçamento aprovado e enviado para a fila de produção com prazo de 7 dias.');
+      window.location.hash = '#/production';
+    } catch (error) {
+      alert(error.message || 'Não foi possível aprovar o orçamento para produção. Verifique se a migração v1.1.11 foi executada no Supabase.');
     }
   });
 

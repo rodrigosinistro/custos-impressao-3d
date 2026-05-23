@@ -10,6 +10,7 @@ import { renderClientsView, attachClientsEvents } from './features/clients/clien
 import { renderPrintersView, attachPrintersEvents } from './features/printers/printersView.js';
 import { renderMaterialsView, attachMaterialsEvents } from './features/materials/materialsView.js';
 import { renderQuotesView, attachQuotesEvents } from './features/quotes/quotesView.js';
+import { renderProductionView, attachProductionEvents } from './features/production/productionView.js';
 import { renderSettingsView, attachSettingsEvents } from './features/settings/settingsView.js';
 
 const app = document.getElementById('app');
@@ -82,6 +83,12 @@ async function render() {
         subtitle: 'Calcule, salve e compartilhe valores de impressão 3D.',
         view: renderQuotesView,
         attach: attachQuotesEvents,
+      },
+      '#/production': {
+        title: 'Produção',
+        subtitle: 'Controle a fila de peças aprovadas e o prazo de produção de até 7 dias.',
+        view: renderProductionView,
+        attach: attachProductionEvents,
       },
       '#/settings': {
         title: 'Configurações',

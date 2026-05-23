@@ -358,3 +358,34 @@ th { color: var(--muted); font-weight: 600; font-size: 0.92rem; }
     grid-template-columns: 1fr;
   }
 }
+
+.compact-row {
+  gap: 8px;
+}
+.compact-row .btn {
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+.status-badge {
+  white-space: nowrap;
+}
+.status-queued {
+  background: rgba(56, 189, 248, 0.12);
+  color: #bae6fd;
+}
+.status-progress {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde68a;
+}
+.status-done {
+  background: rgba(34, 197, 94, 0.15);
+  color: #bbf7d0;
+}
+.status-canceled {
+  background: rgba(248, 113, 113, 0.14);
+  color: #fecaca;
+}
+.row-overdue td {
+  background: rgba(248, 113, 113, 0.08);
+}

@@ -1,7 +1,19 @@
+# Changelog
+
+## v1.1.11
+- Adicionado o novo módulo **Produção** no menu lateral.
+- Criada fila de produção em ordem de chegada, com prazo padrão de 7 dias.
+- Adicionado botão **Aprovar e produzir** no histórico de orçamentos.
+- Ao aprovar um orçamento, o item é enviado para a fila de produção com cliente, peça, material, impressora, peso, tempo, valor e observações.
+- Evita duplicar o mesmo orçamento na produção.
+- Adicionado cadastro de produção avulsa para itens que não vieram de orçamento.
+- Adicionados status de produção: Na fila, Em produção, Concluído, Entregue e Cancelado.
+- Adicionados indicadores de itens ativos, itens na fila, itens em produção e itens atrasados.
+- Adicionada migração `supabase/migrations/v1.1.11-production.sql` e atualização do `supabase/schema.sql`.
+- Atualizado README e versão do pacote para `v1.1.11`.
+
 ## v1.1.10
 - Texto de compartilhamento ajustado exatamente para o formato solicitado pelo usuário, incluindo "Nossa Loja:" e o valor do campo Preço final ao cliente.
-
-# Changelog
 
 ## v1.1.9
 - Atualizado o texto de compartilhamento do orçamento com a mensagem exata solicitada pela Perfeitos Presentes.

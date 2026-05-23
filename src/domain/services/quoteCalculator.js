@@ -90,7 +90,7 @@ export function buildQuoteShareText(quote) {
   const instagramHandle = quote.instagramHandle || '@perfeitos.presentes';
 
   return [
-    `Olá! Obrigado por escolher a ${brandName}. 💝 `,
+    `Olá! Obrigado por escolher a Perfeitos Presentes. 💝 `,
     '',
     `Segue abaixo o valor do seu orçamento para "${pieceName}" `,
     '',

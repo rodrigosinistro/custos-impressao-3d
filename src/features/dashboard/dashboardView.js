@@ -48,6 +48,7 @@ export async function renderDashboardView() {
           <a class="btn btn-secondary" href="#/clients">Clientes</a>
           <a class="btn btn-secondary" href="#/materials">Materiais</a>
           <a class="btn btn-secondary" href="#/printers">Impressoras</a>
+          <a class="btn btn-success" href="#/production">Produção</a>
         </div>
       </section>
 
