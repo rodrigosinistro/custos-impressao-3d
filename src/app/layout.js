@@ -3,6 +3,7 @@ import { authService } from '../domain/services/authService.js';
 import { escapeHtml } from '../core/utils/dom.js';
 
 export function renderShell({ currentHash, title, subtitle, content, settings }) {
+  const appName = settings?.public_app_name || 'Custos de Impressão 3D';
   const navLinks = routes
     .filter((route) => route.requiresAuth)
     .map(
@@ -14,18 +15,26 @@ export function renderShell({ currentHash, title, subtitle, content, settings })
 
   return `
     <div class="page-shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-logo">
-            <img src="./assets/perfeitos-presentes-logo.png" alt="Logo Perfeitos Presentes" class="brand-logo-image" />
+      <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+
+      <aside class="sidebar" id="appSidebar" aria-label="Navegação principal">
+        <div class="sidebar-heading">
+          <div class="brand">
+            <div class="brand-logo">
+              <img src="./assets/perfeitos-presentes-logo.png" alt="Logo Perfeitos Presentes" class="brand-logo-image" />
+            </div>
+            <div class="brand-copy">
+              <h1>${escapeHtml(appName)}</h1>
+              <p>Perfeitos Presentes • GitHub Pages + Supabase</p>
+            </div>
           </div>
-          <div>
-            <h1>${escapeHtml(settings?.public_app_name || 'Custos de Impressão 3D')}</h1>
-            <p>Perfeitos Presentes • GitHub Pages + Supabase</p>
-          </div>
+
+          <button class="icon-button sidebar-close" id="sidebarCloseButton" type="button" aria-label="Fechar menu">
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
-        <div class="notice">
+        <div class="notice sidebar-notice">
           Banco real no Supabase com autenticação, RLS e publicação estática no GitHub Pages.
         </div>
 
@@ -34,7 +43,7 @@ export function renderShell({ currentHash, title, subtitle, content, settings })
         </nav>
 
         <div class="sidebar-footer">
-          <div class="small-text">
+          <div class="small-text sidebar-user">
             Logado como <b>${escapeHtml(authService.getState().user?.email || '---')}</b>
           </div>
           <button class="btn btn-danger" id="logoutButton">Sair</button>
@@ -42,12 +51,23 @@ export function renderShell({ currentHash, title, subtitle, content, settings })
       </aside>
 
       <main class="content-area">
+        <div class="mobile-appbar">
+          <button class="icon-button menu-toggle" id="sidebarToggleButton" type="button" aria-label="Abrir menu" aria-controls="appSidebar" aria-expanded="false">
+            <span class="menu-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+          </button>
+          <div class="mobile-appbar-copy">
+            <strong>${escapeHtml(title)}</strong>
+            <span>${escapeHtml(appName)}</span>
+          </div>
+          <span class="mobile-appbar-status" aria-label="Conectado ao Supabase"></span>
+        </div>
+
         <div class="topbar">
-          <div>
+          <div class="topbar-copy">
             <h2>${escapeHtml(title)}</h2>
             <p>${escapeHtml(subtitle)}</p>
           </div>
-          <span class="badge">Modo Web • Supabase</span>
+          <span class="badge topbar-badge">Modo Web • Supabase</span>
         </div>
         ${content}
       </main>

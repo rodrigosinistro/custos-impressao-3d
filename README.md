@@ -1,6 +1,6 @@
 # Custos de Impressão 3D — Perfeitos Presentes
 
-**Versão atual:** `v1.1.11`
+**Versão atual:** `v1.1.12`
 
 Sistema web estático para calcular custos e orçamentos de impressão 3D, com banco real no Supabase, autenticação, RLS e publicação pelo GitHub Pages.
 
@@ -25,6 +25,7 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Novo módulo **Produção**, com fila em ordem de chegada, status do item e prazo padrão de até **7 dias**.
 - Botão **Aprovar e produzir** no histórico de orçamentos, enviando o orçamento direto para a fila de produção.
 - Cadastro de produção avulsa para itens que não vieram de orçamento.
+- Interface responsiva para computador, tablet e celular, incluindo menu retrátil e tabelas em formato de cartões no telefone.
 
 ## Requisitos
 
@@ -32,7 +33,8 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Tabelas e políticas executadas no SQL Editor.
 - Pelo menos 1 usuário criado em **Authentication > Users**.
 - Arquivo `config.js` preenchido com URL e chave anon/publishable.
-- Para atualizar uma instalação existente para `v1.1.11`, execute a migração `supabase/migrations/v1.1.11-production.sql` no SQL Editor do Supabase.
+- Para atualizar uma instalação anterior à `v1.1.11`, execute a migração `supabase/migrations/v1.1.11-production.sql` no SQL Editor do Supabase.
+- A atualização da `v1.1.11` para a `v1.1.12` não exige nenhuma alteração no banco de dados.
 
 ## Configuração
 
@@ -50,10 +52,11 @@ window.APP_CONFIG = {
 
 ## Como publicar
 
-1. Execute a migração `supabase/migrations/v1.1.11-production.sql` se o banco já existe.
+1. Caso esteja vindo de uma versão anterior à `v1.1.11`, execute a migração `supabase/migrations/v1.1.11-production.sql`.
 2. Se for uma instalação nova, execute `supabase/schema.sql` completo.
-3. Suba todos os arquivos deste pacote para o repositório `rodrigosinistro/custos-impressao-3d`.
-4. Publique pelo GitHub Pages usando a raiz da branch `main` ou o workflow incluído em `.github/workflows/pages.yml`.
+3. Para atualizar da `v1.1.11` para a `v1.1.12`, apenas substitua os arquivos do site; não há migração nova.
+4. Suba todos os arquivos deste pacote para o repositório `rodrigosinistro/custos-impressao-3d`.
+5. Publique pelo GitHub Pages usando a raiz da branch `main` ou o workflow incluído em `.github/workflows/pages.yml`.
 
 ## Observações de uso
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.12
+- Interface atualizada para funcionar corretamente em computadores, tablets e celulares.
+- Menu lateral transformado em menu retrátil no celular, com botão de abertura, fundo de bloqueio e fechamento por toque ou tecla Esc.
+- Tabelas convertidas automaticamente em cartões no celular, mantendo os rótulos de cada informação e os botões de ação acessíveis.
+- Grades, formulários, indicadores e painel de orçamento ajustados para diferentes larguras de tela.
+- Melhorados espaçamento, quebra de textos longos, tamanho mínimo dos botões e campos para uso por toque.
+- Adicionados ajustes para barra segura do celular, prevenção de rolagem horizontal e suporte a movimento reduzido.
+- Nenhuma alteração no banco de dados é necessária para esta versão.
+
 ## v1.1.11
 - Adicionado o novo módulo **Produção** no menu lateral.
 - Criada fila de produção em ordem de chegada, com prazo padrão de 7 dias.

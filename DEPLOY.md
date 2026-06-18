@@ -5,7 +5,15 @@
 - GitHub: https://github.com/rodrigosinistro/custos-impressao-3d
 - Pages: https://rodrigosinistro.github.io/custos-impressao-3d/
 
-## Atualização para v1.1.11
+## Atualização para v1.1.12
+
+### Vindo da v1.1.11
+
+1. Suba todos os arquivos deste pacote para a branch `main` do repositório.
+2. Aguarde o GitHub Pages publicar a nova versão.
+3. Não é necessário executar nenhuma migração no Supabase.
+
+### Vindo de uma versão anterior à v1.1.11
 
 1. Abra o Supabase do projeto.
 2. Vá em **SQL Editor**.

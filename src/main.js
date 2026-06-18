@@ -17,9 +17,58 @@ const app = document.getElementById('app');
 let renderCounter = 0;
 
 function bindCommonEvents() {
+  const sidebar = qs('#appSidebar');
+  const overlay = qs('#sidebarOverlay');
+  const toggleButton = qs('#sidebarToggleButton');
+  const closeButton = qs('#sidebarCloseButton');
+
+  const setSidebarOpen = (isOpen) => {
+    if (!sidebar || !overlay || !toggleButton) return;
+    sidebar.classList.toggle('is-open', isOpen);
+    overlay.hidden = !isOpen;
+    overlay.classList.toggle('is-visible', isOpen);
+    toggleButton.setAttribute('aria-expanded', String(isOpen));
+    document.body.classList.toggle('menu-open', isOpen);
+  };
+
+  toggleButton?.addEventListener('click', () => setSidebarOpen(!sidebar?.classList.contains('is-open')));
+  closeButton?.addEventListener('click', () => setSidebarOpen(false));
+  overlay?.addEventListener('click', () => setSidebarOpen(false));
+
+  sidebar?.querySelectorAll('.nav-link').forEach((link) => {
+    link.addEventListener('click', () => setSidebarOpen(false));
+  });
+
+  document.onkeydown = (event) => {
+    if (event.key === 'Escape' && sidebar?.classList.contains('is-open')) {
+      setSidebarOpen(false);
+      toggleButton?.focus();
+    }
+  };
+
+  window.onresize = () => {
+    if (window.innerWidth > 960) setSidebarOpen(false);
+  };
+
   qs('#logoutButton')?.addEventListener('click', async () => {
     await authService.logout();
     window.location.hash = '#/login';
+  });
+}
+
+function enhanceResponsiveTables() {
+  document.querySelectorAll('.table-wrap table').forEach((table) => {
+    const headers = Array.from(table.querySelectorAll('thead th')).map((header) => header.textContent.trim());
+    if (!headers.length) return;
+
+    table.classList.add('responsive-table');
+    table.querySelectorAll('tbody tr').forEach((row) => {
+      Array.from(row.children).forEach((cell, index) => {
+        const label = headers[index] || '';
+        cell.dataset.label = label;
+        if (!label) cell.classList.add('table-actions');
+      });
+    });
   });
 }
 
@@ -110,6 +159,7 @@ async function render() {
       settings,
     });
     bindCommonEvents();
+    enhanceResponsiveTables();
     await screen.attach?.(refresh);
   } catch (error) {
     console.error(error);
