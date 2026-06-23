@@ -5,9 +5,9 @@
 - GitHub: https://github.com/rodrigosinistro/custos-impressao-3d
 - Pages: https://rodrigosinistro.github.io/custos-impressao-3d/
 
-## Atualização para v1.1.12
+## Atualização para v1.1.13
 
-### Vindo da v1.1.11
+### Vindo da v1.1.11 ou v1.1.12
 
 1. Suba todos os arquivos deste pacote para a branch `main` do repositório.
 2. Aguarde o GitHub Pages publicar a nova versão.

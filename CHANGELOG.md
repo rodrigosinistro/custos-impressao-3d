@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.13
+- Alterada a sugestão automática para sempre arredondar o valor calculado para cima, usando o próximo preço terminado em `X,99`. Exemplo: `R$ 32,02` passa a `R$ 32,99`.
+- Mão de obra e pintura agora são calculadas automaticamente como 10% do valor calculado, antes do arredondamento para `X,99`.
+- Removidos os campos manuais de mão de obra e acabamento/pintura da tela de orçamento e das configurações, evitando divergências com a nova regra automática.
+- O resumo do orçamento agora mostra separadamente o valor antes de mão de obra e pintura, os 10% automáticos e o preço calculado antes do arredondamento.
+- Após um orçamento ser enviado à fila, o botão passa a exibir `ENVIADO PARA A PRODUÇÃO` e permanece assim ao retornar à tela de Orçamentos.
+- Nenhuma alteração no banco de dados é necessária para esta versão.
+
 ## v1.1.12
 - Interface atualizada para funcionar corretamente em computadores, tablets e celulares.
 - Menu lateral transformado em menu retrátil no celular, com botão de abertura, fundo de bloqueio e fechamento por toque ou tecla Esc.

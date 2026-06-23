@@ -25,8 +25,10 @@ function renderQuotePreview(result) {
     <div class="separator"></div>
     <div class="summary-line"><span>Custo base</span><b>${formatCurrency(result.baseCost)}</b></div>
     <div class="summary-line"><span>Custo com falha</span><b>${formatCurrency(result.costWithFailure)}</b></div>
+    <div class="summary-line"><span>Valor antes de mão de obra e pintura</span><b>${formatCurrency(result.priceBeforeLaborAndFinishing)}</b></div>
+    <div class="summary-line"><span>Mão de obra e pintura (10%)</span><b>${formatCurrency(result.laborAndFinishingCost)}</b></div>
     <div class="summary-line"><span>Preço calculado</span><b>${formatCurrency(result.calculatedFinalPrice)}</b></div>
-    <div class="summary-line"><span>Preço sugerido (9,99)</span><b>${formatCurrency(result.suggestedPrice)}</b></div>
+    <div class="summary-line"><span>Preço sugerido (X,99 acima)</span><b>${formatCurrency(result.suggestedPrice)}</b></div>
     <div class="summary-line"><span>Ajuste manual</span><b>${result.manualAdjustedPrice !== null ? formatCurrency(result.manualAdjustedPrice) : '-'}</b></div>
     <div class="summary-line"><span>Desconto</span><b>${formatCurrency(result.discountAmount)}</b></div>
     <div class="separator"></div>
@@ -42,13 +44,20 @@ function setFormValue(form, name, value) {
 }
 
 export async function renderQuotesView() {
-  const [clients, printers, materials, quotes, settings] = await Promise.all([
+  const [clients, printers, materials, quotes, settings, productionItems] = await Promise.all([
     clientsRepository.getAll(),
     printersRepository.getAll(),
     materialsRepository.getAll(),
     quotesRepository.getAll(),
     settingsRepository.getMine(),
+    productionRepository.getAll(),
   ]);
+
+  const producedQuoteIds = new Set(
+    productionItems
+      .filter((item) => item.quote_id)
+      .map((item) => String(item.quote_id)),
+  );
 
   const initialPreview = renderQuotePreview(
     calculateQuote({
@@ -56,8 +65,6 @@ export async function renderQuotesView() {
       printTimeMinutes: 180,
       energyCostKwh: settings.energy_cost_kwh,
       failureRate: settings.default_failure_rate,
-      laborCost: settings.default_labor_cost,
-      finishingCost: settings.default_finishing_cost,
       packagingCost: settings.default_packaging_cost,
       shippingCost: 0,
       profitMargin: settings.default_profit_margin,
@@ -89,26 +96,27 @@ export async function renderQuotesView() {
 
           <div class="form-grid-3">
             <div class="field"><label>Taxa de falha (%)</label><input name="failureRate" inputmode="decimal" value="${settings.default_failure_rate}" /></div>
-            <div class="field"><label>Mão de obra</label><input name="laborCost" inputmode="decimal" value="${settings.default_labor_cost}" /></div>
-            <div class="field"><label>Acabamento / pintura</label><input name="finishingCost" inputmode="decimal" value="${settings.default_finishing_cost}" /></div>
-          </div>
-
-          <div class="form-grid-3">
             <div class="field"><label>Embalagem</label><input name="packagingCost" inputmode="decimal" value="${settings.default_packaging_cost}" /></div>
             <div class="field"><label>Frete</label><input name="shippingCost" inputmode="decimal" value="0" /></div>
-            <div class="field"><label>Margem de lucro (%)</label><input name="profitMargin" inputmode="decimal" value="${settings.default_profit_margin}" /></div>
           </div>
 
           <div class="form-grid-3">
+            <div class="field"><label>Margem de lucro (%)</label><input name="profitMargin" inputmode="decimal" value="${settings.default_profit_margin}" /></div>
             <div class="field"><label>Impostos (%)</label><input name="taxRate" inputmode="decimal" value="${settings.default_tax_rate}" /></div>
             <div class="field"><label>Taxa de cartão (%)</label><input name="cardFeeRate" inputmode="decimal" value="${settings.default_card_fee_rate}" /></div>
-            <div class="field"><label>Preço manual ao cliente (R$)</label><input name="manualAdjustedPrice" inputmode="decimal" placeholder="Opcional" /></div>
           </div>
 
           <div class="form-grid-3">
+            <div class="field"><label>Preço manual ao cliente (R$)</label><input name="manualAdjustedPrice" inputmode="decimal" placeholder="Opcional" /></div>
             <div class="field"><label>Desconto (R$)</label><input name="discountAmount" inputmode="decimal" value="0" /></div>
             <div class="field"><label>Observações</label><input name="notes" /></div>
-            <div class="field"><label>&nbsp;</label><div class="notice">O preço final sempre usa a sugestão abaixo terminada em 9,99, salvo quando você preencher o preço manual.</div></div>
+          </div>
+
+          <div class="notice" style="margin-bottom:12px;">
+            Mão de obra e pintura são calculadas automaticamente como <b>10% do valor calculado</b>, antes do arredondamento.
+          </div>
+          <div class="notice" style="margin-bottom:12px;">
+            O preço final sempre usa a sugestão <b>acima</b> terminada em <b>X,99</b>, salvo quando você preencher o preço manual.
           </div>
 
           <div id="quoteFeedback"></div>
@@ -136,23 +144,28 @@ export async function renderQuotesView() {
           <table>
             <thead><tr><th>Peça</th><th>Cliente</th><th>Tempo</th><th>Valor</th><th>Data</th><th></th></tr></thead>
             <tbody>
-              ${quotes.map((quote) => `
-                <tr>
-                  <td>${escapeHtml(quote.piece_name)}</td>
-                  <td>${escapeHtml(quote.client_name || '-')}</td>
-                  <td>${formatMinutes(quote.print_time_minutes)}</td>
-                  <td>${formatCurrency(quote.final_price)}</td>
-                  <td>${formatDateTime(quote.created_at)}</td>
-                  <td>
-                    <div class="button-row">
-                      <button class="btn btn-secondary" data-edit-quote="${quote.id}">Editar</button>
-                      <button class="btn btn-success" data-approve-quote="${quote.id}">Aprovar e produzir</button>
-                      <button class="btn btn-secondary" data-share-quote="${quote.id}">Compartilhar</button>
-                      <button class="btn btn-danger" data-remove-quote="${quote.id}">Excluir</button>
-                    </div>
-                  </td>
-                </tr>
-              `).join('')}
+              ${quotes.map((quote) => {
+                const wasSentToProduction = producedQuoteIds.has(String(quote.id));
+                return `
+                  <tr>
+                    <td>${escapeHtml(quote.piece_name)}</td>
+                    <td>${escapeHtml(quote.client_name || '-')}</td>
+                    <td>${formatMinutes(quote.print_time_minutes)}</td>
+                    <td>${formatCurrency(quote.final_price)}</td>
+                    <td>${formatDateTime(quote.created_at)}</td>
+                    <td>
+                      <div class="button-row">
+                        <button class="btn btn-secondary" data-edit-quote="${quote.id}">Editar</button>
+                        ${wasSentToProduction
+                          ? '<button class="btn btn-success" type="button" disabled>ENVIADO PARA A PRODUÇÃO</button>'
+                          : `<button class="btn btn-success" data-approve-quote="${quote.id}">Aprovar e produzir</button>`}
+                        <button class="btn btn-secondary" data-share-quote="${quote.id}">Compartilhar</button>
+                        <button class="btn btn-danger" data-remove-quote="${quote.id}">Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
         </div>
@@ -203,8 +216,6 @@ export async function attachQuotesEvents(refresh) {
     setFormValue(form, 'printTimeMinutes', quote.print_time_minutes ?? '');
     setFormValue(form, 'energyCostKwh', quote.energy_cost_kwh ?? '');
     setFormValue(form, 'failureRate', quote.failure_rate ?? '');
-    setFormValue(form, 'laborCost', quote.labor_cost ?? '');
-    setFormValue(form, 'finishingCost', quote.finishing_cost ?? '');
     setFormValue(form, 'packagingCost', quote.packaging_cost ?? '');
     setFormValue(form, 'shippingCost', quote.shipping_cost ?? '');
     setFormValue(form, 'profitMargin', quote.profit_margin ?? '');
@@ -239,8 +250,6 @@ export async function attachQuotesEvents(refresh) {
       costPerG: Number(material.cost_per_g || 0),
       energyCostKwh: toNumber(formData.get('energyCostKwh')),
       failureRate: toNumber(formData.get('failureRate')),
-      laborCost: toNumber(formData.get('laborCost')),
-      finishingCost: toNumber(formData.get('finishingCost')),
       packagingCost: toNumber(formData.get('packagingCost')),
       shippingCost: toNumber(formData.get('shippingCost')),
       profitMargin: toNumber(formData.get('profitMargin')),
@@ -280,8 +289,8 @@ export async function attachQuotesEvents(refresh) {
         print_time_minutes: toInt(payload.formData.get('printTimeMinutes')),
         energy_cost_kwh: toNumber(payload.formData.get('energyCostKwh')),
         failure_rate: toNumber(payload.formData.get('failureRate')),
-        labor_cost: toNumber(payload.formData.get('laborCost')),
-        finishing_cost: toNumber(payload.formData.get('finishingCost')),
+        labor_cost: payload.result.laborCost,
+        finishing_cost: payload.result.finishingCost,
         packaging_cost: toNumber(payload.formData.get('packagingCost')),
         shipping_cost: toNumber(payload.formData.get('shippingCost')),
         profit_margin: toNumber(payload.formData.get('profitMargin')),
@@ -331,15 +340,27 @@ export async function attachQuotesEvents(refresh) {
   });
 
   on('[data-approve-quote]', 'click', async (_, button) => {
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'ENVIANDO...';
+
     try {
       const quote = await quotesRepository.getById(button.dataset.approveQuote);
-      if (!quote) return;
+      if (!quote) {
+        button.disabled = false;
+        button.textContent = originalText;
+        return;
+      }
+
       const result = await productionRepository.createFromQuote(quote);
+      button.textContent = 'ENVIADO PARA A PRODUÇÃO';
       alert(result.alreadyExisted
         ? 'Este orçamento já estava na fila de produção.'
         : 'Orçamento aprovado e enviado para a fila de produção com prazo de 7 dias.');
       window.location.hash = '#/production';
     } catch (error) {
+      button.disabled = false;
+      button.textContent = originalText;
       alert(error.message || 'Não foi possível aprovar o orçamento para produção. Verifique se a migração v1.1.11 foi executada no Supabase.');
     }
   });

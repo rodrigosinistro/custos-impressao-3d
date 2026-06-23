@@ -2,11 +2,20 @@ function roundMoney(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
-export function roundDownToNineNinetyNine(value) {
+export function roundUpToNinetyNine(value) {
   const numeric = Number(value || 0);
   if (!Number.isFinite(numeric) || numeric <= 0) return 0;
-  if (numeric < 9.99) return roundMoney(numeric);
-  return roundMoney(Math.floor((numeric - 9.99) / 10) * 10 + 9.99);
+
+  // Trabalha em centavos para evitar imprecisões de ponto flutuante.
+  const valueInCents = Math.ceil((numeric * 100) - 0.000001);
+  const wholeReais = Math.floor(valueInCents / 100);
+  let suggestedInCents = (wholeReais * 100) + 99;
+
+  if (suggestedInCents < valueInCents) {
+    suggestedInCents += 100;
+  }
+
+  return roundMoney(suggestedInCents / 100);
 }
 
 export function calculateQuote(input) {
@@ -19,8 +28,6 @@ export function calculateQuote(input) {
   const maintenanceMonthly = Number(input.monthlyMaintenanceCost || 0);
   const energyCostKwh = Number(input.energyCostKwh || 0);
   const failureRate = Number(input.failureRate || 0);
-  const laborCost = Number(input.laborCost || 0);
-  const finishingCost = Number(input.finishingCost || 0);
   const packagingCost = Number(input.packagingCost || 0);
   const shippingCost = Number(input.shippingCost || 0);
   const profitMargin = Number(input.profitMargin || 0);
@@ -50,29 +57,41 @@ export function calculateQuote(input) {
     costEnergy +
     costDepreciation +
     costMaintenance +
-    laborCost +
-    finishingCost +
     packagingCost +
     shippingCost;
 
   const costWithFailure = baseCost * (1 + failureRate / 100);
   const priceWithProfit = costWithFailure * (1 + profitMargin / 100);
   const priceWithTax = priceWithProfit * (1 + taxRate / 100);
-  const calculatedFinalPrice = priceWithTax * (1 + cardFeeRate / 100);
-  const suggestedPrice = roundDownToNineNinetyNine(calculatedFinalPrice);
+  const priceBeforeLaborAndFinishing = priceWithTax * (1 + cardFeeRate / 100);
+
+  // Mão de obra e pintura são calculadas automaticamente como 10%
+  // do valor calculado, antes da sugestão de preço terminada em X,99.
+  const laborAndFinishingCost = priceBeforeLaborAndFinishing * 0.10;
+  const calculatedFinalPrice = priceBeforeLaborAndFinishing + laborAndFinishingCost;
+  const suggestedPrice = roundUpToNinetyNine(calculatedFinalPrice);
   const adjustedPrice = manualAdjustedPrice !== null ? manualAdjustedPrice : suggestedPrice;
   const finalPrice = Math.max(0, adjustedPrice - discountAmount);
-  const expectedProfit = finalPrice - costWithFailure;
+  const expectedProfit = finalPrice - costWithFailure - laborAndFinishingCost;
+
+  // Mantém compatibilidade com as colunas existentes do banco, dividindo
+  // igualmente os 10% entre mão de obra e acabamento/pintura.
+  const laborCost = laborAndFinishingCost / 2;
+  const finishingCost = laborAndFinishingCost - laborCost;
 
   return {
     costMaterial: roundMoney(costMaterial),
     costEnergy: roundMoney(costEnergy),
     costDepreciation: roundMoney(costDepreciation),
     costMaintenance: roundMoney(costMaintenance),
+    laborCost: roundMoney(laborCost),
+    finishingCost: roundMoney(finishingCost),
+    laborAndFinishingCost: roundMoney(laborAndFinishingCost),
     baseCost: roundMoney(baseCost),
     costWithFailure: roundMoney(costWithFailure),
     priceWithProfit: roundMoney(priceWithProfit),
     priceWithTax: roundMoney(priceWithTax),
+    priceBeforeLaborAndFinishing: roundMoney(priceBeforeLaborAndFinishing),
     calculatedFinalPrice: roundMoney(calculatedFinalPrice),
     suggestedPrice: roundMoney(suggestedPrice),
     manualAdjustedPrice: manualAdjustedPrice !== null ? roundMoney(manualAdjustedPrice) : null,

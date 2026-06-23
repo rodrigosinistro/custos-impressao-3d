@@ -1,6 +1,6 @@
 # Custos de Impressão 3D — Perfeitos Presentes
 
-**Versão atual:** `v1.1.12`
+**Versão atual:** `v1.1.13`
 
 Sistema web estático para calcular custos e orçamentos de impressão 3D, com banco real no Supabase, autenticação, RLS e publicação pelo GitHub Pages.
 
@@ -17,13 +17,14 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Proteção dos dados com **Row Level Security (RLS)**.
 - Cadastro e gerenciamento de clientes, impressoras e materiais.
 - Cadastro público de cliente, salvando direto no banco.
-- Cálculo de orçamento com custo de material, energia, depreciação, manutenção, falha, mão de obra, acabamento, embalagem, frete, impostos, taxa de cartão e margem.
-- Preço final ao cliente com sugestão automática terminada em **9,99**, além de preço manual e desconto em reais.
+- Cálculo de orçamento com custo de material, energia, depreciação, manutenção, falha, embalagem, frete, impostos, taxa de cartão e margem.
+- Mão de obra e pintura calculadas automaticamente como **10% do valor calculado**, antes do arredondamento.
+- Preço final ao cliente com sugestão automática sempre arredondada **para cima** no padrão **X,99**, além de preço manual e desconto em reais.
 - Histórico de orçamentos salvos no Supabase.
 - Edição, exclusão e compartilhamento de orçamentos.
 - Mensagem de compartilhamento personalizada para a **Perfeitos Presentes**, com loja e Instagram.
 - Novo módulo **Produção**, com fila em ordem de chegada, status do item e prazo padrão de até **7 dias**.
-- Botão **Aprovar e produzir** no histórico de orçamentos, enviando o orçamento direto para a fila de produção.
+- Botão **Aprovar e produzir** no histórico de orçamentos, enviando o orçamento direto para a fila e mudando para **ENVIADO PARA A PRODUÇÃO** após o envio.
 - Cadastro de produção avulsa para itens que não vieram de orçamento.
 - Interface responsiva para computador, tablet e celular, incluindo menu retrátil e tabelas em formato de cartões no telefone.
 
@@ -34,7 +35,7 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Pelo menos 1 usuário criado em **Authentication > Users**.
 - Arquivo `config.js` preenchido com URL e chave anon/publishable.
 - Para atualizar uma instalação anterior à `v1.1.11`, execute a migração `supabase/migrations/v1.1.11-production.sql` no SQL Editor do Supabase.
-- A atualização da `v1.1.11` para a `v1.1.12` não exige nenhuma alteração no banco de dados.
+- As atualizações da `v1.1.11` até a `v1.1.13` não exigem nenhuma alteração adicional no banco de dados.
 
 ## Configuração
 
@@ -54,7 +55,7 @@ window.APP_CONFIG = {
 
 1. Caso esteja vindo de uma versão anterior à `v1.1.11`, execute a migração `supabase/migrations/v1.1.11-production.sql`.
 2. Se for uma instalação nova, execute `supabase/schema.sql` completo.
-3. Para atualizar da `v1.1.11` para a `v1.1.12`, apenas substitua os arquivos do site; não há migração nova.
+3. Para atualizar da `v1.1.11`, `v1.1.12` ou `v1.1.13`, apenas substitua os arquivos do site; não há migração nova.
 4. Suba todos os arquivos deste pacote para o repositório `rodrigosinistro/custos-impressao-3d`.
 5. Publique pelo GitHub Pages usando a raiz da branch `main` ou o workflow incluído em `.github/workflows/pages.yml`.
 
@@ -62,5 +63,5 @@ window.APP_CONFIG = {
 
 - Salvar um orçamento não compartilha automaticamente.
 - O botão **Compartilhar** copia/envia a mensagem somente quando acionado no orçamento salvo.
-- O botão **Aprovar e produzir** cria um item de produção com prazo de 7 dias e evita duplicar o mesmo orçamento na fila.
+- O botão **Aprovar e produzir** cria um item de produção com prazo de 7 dias, evita duplicação e passa a mostrar **ENVIADO PARA A PRODUÇÃO**.
 - A fila de produção é exibida em ordem de chegada para facilitar o controle do que deve ser produzido primeiro.

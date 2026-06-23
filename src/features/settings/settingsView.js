@@ -29,10 +29,11 @@ export async function renderSettingsView() {
             <div class="field"><label>Margem padrão (%)</label><input name="defaultProfitMargin" inputmode="decimal" value="${settings.default_profit_margin}" /></div>
             <div class="field"><label>Imposto padrão (%)</label><input name="defaultTaxRate" inputmode="decimal" value="${settings.default_tax_rate}" /></div>
             <div class="field"><label>Taxa de cartão (%)</label><input name="defaultCardFeeRate" inputmode="decimal" value="${settings.default_card_fee_rate}" /></div>
-            <div class="field"><label>Mão de obra padrão</label><input name="defaultLaborCost" inputmode="decimal" value="${settings.default_labor_cost}" /></div>
-            <div class="field"><label>Acabamento padrão</label><input name="defaultFinishingCost" inputmode="decimal" value="${settings.default_finishing_cost}" /></div>
             <div class="field"><label>Embalagem padrão</label><input name="defaultPackagingCost" inputmode="decimal" value="${settings.default_packaging_cost}" /></div>
             <div class="field checkbox-field"><label><input name="allowPublicClientSignup" type="checkbox" ${settings.allow_public_client_signup ? 'checked' : ''} /> Permitir cadastro público</label></div>
+          </div>
+          <div class="notice" style="margin-bottom:12px;">
+            Mão de obra e pintura são aplicadas automaticamente como <b>10% do valor calculado</b> em todos os orçamentos.
           </div>
           <div id="settingsFeedback"></div>
           <div class="button-row"><button class="btn btn-primary" type="submit">Salvar configurações</button></div>
@@ -74,8 +75,6 @@ export function attachSettingsEvents(refresh) {
         default_profit_margin: toNumber(formData.get('defaultProfitMargin')),
         default_tax_rate: toNumber(formData.get('defaultTaxRate')),
         default_card_fee_rate: toNumber(formData.get('defaultCardFeeRate')),
-        default_labor_cost: toNumber(formData.get('defaultLaborCost')),
-        default_finishing_cost: toNumber(formData.get('defaultFinishingCost')),
         default_packaging_cost: toNumber(formData.get('defaultPackagingCost')),
         allow_public_client_signup: formData.get('allowPublicClientSignup') === 'on',
       });
