@@ -108,7 +108,7 @@ export function buildQuoteShareText(quote) {
   const storeUrl = quote.storeUrl || 'https://loja.infinitepay.io/perfeitos_presentes';
   const instagramHandle = quote.instagramHandle || '@perfeitos.presentes';
 
-  return [
+  const lines = [
     `Olá! Obrigado por escolher a Perfeitos Presentes. 💝 `,
     '',
     `Segue abaixo o valor do seu orçamento para "${pieceName}" `,
@@ -120,5 +120,15 @@ export function buildQuoteShareText(quote) {
     `Instagram: ${instagramHandle}`,
     '',
     'Se quiser confirmar o pedido ou tirar qualquer dúvida, é só me chamar.',
-  ].join('\n');
+  ];
+
+  if (quote.projectImageUrl) {
+    lines.push(
+      '',
+      'Essa imagem é somente de referência, poderá haver diferenças em cores e tamanho, dependendo da escolha do cliente.',
+      quote.projectImageUrl,
+    );
+  }
+
+  return lines.join('\n');
 }

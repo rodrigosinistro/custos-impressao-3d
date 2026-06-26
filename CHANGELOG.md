@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.14
+- Adicionados os campos **Link Projeto** e **Link Imagem do Projeto** logo abaixo de Cliente e Nome da peça no formulário de orçamento.
+- Os dois links passam a ser salvos e restaurados ao editar um orçamento.
+- Adicionados atalhos **Projeto** e **Imagem** no histórico para abrir rapidamente as referências cadastradas.
+- Quando há uma imagem de projeto cadastrada, o compartilhamento inclui o aviso de imagem de referência e o endereço da imagem abaixo da mensagem atual.
+- O sistema tenta anexar a imagem do projeto ao compartilhamento; caso o servidor da imagem bloqueie o download externo, o link permanece na mensagem como alternativa.
+- Adicionada a migração `supabase/migrations/v1.1.14-project-links.sql`.
+
 ## v1.1.13
 - Alterada a sugestão automática para sempre arredondar o valor calculado para cima, usando o próximo preço terminado em `X,99`. Exemplo: `R$ 32,02` passa a `R$ 32,99`.
 - Mão de obra e pintura agora são calculadas automaticamente como 10% do valor calculado, antes do arredondamento para `X,99`.

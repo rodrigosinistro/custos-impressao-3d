@@ -5,21 +5,24 @@
 - GitHub: https://github.com/rodrigosinistro/custos-impressao-3d
 - Pages: https://rodrigosinistro.github.io/custos-impressao-3d/
 
-## Atualização para v1.1.13
+## Atualização para v1.1.14
 
-### Vindo da v1.1.11 ou v1.1.12
+### Vindo da v1.1.11, v1.1.12 ou v1.1.13
 
-1. Suba todos os arquivos deste pacote para a branch `main` do repositório.
-2. Aguarde o GitHub Pages publicar a nova versão.
-3. Não é necessário executar nenhuma migração no Supabase.
+1. Abra o Supabase do projeto.
+2. Vá em **SQL Editor**.
+3. Execute `supabase/migrations/v1.1.14-project-links.sql`.
+4. Suba todos os arquivos deste pacote para a branch `main` do repositório.
+5. Aguarde o GitHub Pages publicar a nova versão.
 
 ### Vindo de uma versão anterior à v1.1.11
 
 1. Abra o Supabase do projeto.
 2. Vá em **SQL Editor**.
 3. Execute `supabase/migrations/v1.1.11-production.sql`.
-4. Suba todos os arquivos deste pacote para a branch `main` do repositório.
-5. Aguarde o GitHub Pages publicar a nova versão.
+4. Execute `supabase/migrations/v1.1.14-project-links.sql`.
+5. Suba todos os arquivos deste pacote para a branch `main` do repositório.
+6. Aguarde o GitHub Pages publicar a nova versão.
 
 ## Instalação nova
 

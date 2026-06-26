@@ -76,6 +76,8 @@ create table if not exists public.quotes (
   client_id uuid references public.clients(id) on delete set null,
   client_name text,
   piece_name text not null,
+  project_link text,
+  project_image_url text,
   printer_id uuid references public.printers(id) on delete set null,
   printer_name text,
   material_id uuid references public.materials(id) on delete set null,
@@ -110,6 +112,8 @@ alter table public.quotes add column if not exists calculated_final_price numeri
 alter table public.quotes add column if not exists adjusted_price numeric(12,2) not null default 0;
 alter table public.quotes add column if not exists manual_adjusted_price numeric(12,2);
 alter table public.quotes add column if not exists discount_amount numeric(12,2) not null default 0;
+alter table public.quotes add column if not exists project_link text;
+alter table public.quotes add column if not exists project_image_url text;
 
 update public.quotes
 set

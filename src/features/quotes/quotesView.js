@@ -43,6 +43,34 @@ function setFormValue(form, name, value) {
   field.value = value ?? '';
 }
 
+function normalizeExternalUrl(value) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return '';
+
+  try {
+    const url = new URL(rawValue);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function renderQuoteReferenceLinks(quote) {
+  const projectLink = normalizeExternalUrl(quote.project_link);
+  const projectImageUrl = normalizeExternalUrl(quote.project_image_url);
+  const links = [];
+
+  if (projectLink) {
+    links.push(`<a class="btn btn-ghost" href="${escapeHtml(projectLink)}" target="_blank" rel="noopener noreferrer">Projeto</a>`);
+  }
+
+  if (projectImageUrl) {
+    links.push(`<a class="btn btn-ghost" href="${escapeHtml(projectImageUrl)}" target="_blank" rel="noopener noreferrer">Imagem</a>`);
+  }
+
+  return links.length ? `<div class="button-row compact-row">${links.join('')}</div>` : '-';
+}
+
 export async function renderQuotesView() {
   const [clients, printers, materials, quotes, settings, productionItems] = await Promise.all([
     clientsRepository.getAll(),
@@ -84,6 +112,14 @@ export async function renderQuotesView() {
           <div class="form-grid">
             <div class="field"><label>Cliente</label><select name="clientId">${buildSelectOptions(clients, 'Selecione', (item) => item.name)}</select></div>
             <div class="field"><label>Nome da peça</label><input name="pieceName" required /></div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field"><label>Link Projeto</label><input name="projectLink" type="url" inputmode="url" placeholder="https://..." /></div>
+            <div class="field"><label>Link Imagem do Projeto</label><input name="projectImageUrl" type="url" inputmode="url" placeholder="https://..." /></div>
+          </div>
+
+          <div class="form-grid">
             <div class="field"><label>Impressora</label><select name="printerId" required>${buildSelectOptions(printers, 'Selecione', (item) => item.name)}</select></div>
             <div class="field"><label>Material</label><select name="materialId" required>${buildSelectOptions(materials, 'Selecione', (item) => item.name)}</select></div>
           </div>
@@ -142,7 +178,7 @@ export async function renderQuotesView() {
       ${quotes.length ? `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Peça</th><th>Cliente</th><th>Tempo</th><th>Valor</th><th>Data</th><th></th></tr></thead>
+            <thead><tr><th>Peça</th><th>Cliente</th><th>Referências</th><th>Tempo</th><th>Valor</th><th>Data</th><th></th></tr></thead>
             <tbody>
               ${quotes.map((quote) => {
                 const wasSentToProduction = producedQuoteIds.has(String(quote.id));
@@ -150,6 +186,7 @@ export async function renderQuotesView() {
                   <tr>
                     <td>${escapeHtml(quote.piece_name)}</td>
                     <td>${escapeHtml(quote.client_name || '-')}</td>
+                    <td>${renderQuoteReferenceLinks(quote)}</td>
                     <td>${formatMinutes(quote.print_time_minutes)}</td>
                     <td>${formatCurrency(quote.final_price)}</td>
                     <td>${formatDateTime(quote.created_at)}</td>
@@ -210,6 +247,8 @@ export async function attachQuotesEvents(refresh) {
     setFormValue(form, 'id', quote.id);
     setFormValue(form, 'clientId', quote.client_id || '');
     setFormValue(form, 'pieceName', quote.piece_name || '');
+    setFormValue(form, 'projectLink', quote.project_link || '');
+    setFormValue(form, 'projectImageUrl', quote.project_image_url || '');
     setFormValue(form, 'printerId', quote.printer_id || '');
     setFormValue(form, 'materialId', quote.material_id || '');
     setFormValue(form, 'weightG', quote.weight_g ?? '');
@@ -281,6 +320,8 @@ export async function attachQuotesEvents(refresh) {
         client_id: client.id || null,
         client_name: client.name || '',
         piece_name: payload.formData.get('pieceName'),
+        project_link: String(payload.formData.get('projectLink') || '').trim() || null,
+        project_image_url: String(payload.formData.get('projectImageUrl') || '').trim() || null,
         printer_id: payload.printer?.id || null,
         printer_name: payload.printer?.name || '',
         material_id: payload.material?.id || null,
@@ -366,15 +407,37 @@ export async function attachQuotesEvents(refresh) {
   });
 
 
+  async function fetchImageFile(url, fallbackName) {
+    const safeUrl = normalizeExternalUrl(url) || url;
+    const response = await fetch(safeUrl, { mode: 'cors' });
+    if (!response.ok) throw new Error('Não foi possível baixar a imagem.');
+
+    const blob = await response.blob();
+    if (!String(blob.type || '').startsWith('image/')) {
+      throw new Error('O link informado não retornou um arquivo de imagem.');
+    }
+
+    const extensionByType = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+    };
+    const extension = extensionByType[blob.type] || 'png';
+    return new File([blob], `${fallbackName}.${extension}`, { type: blob.type || 'image/png' });
+  }
+
   async function buildSharePayload(quote) {
     const appConfig = getAppConfig();
     const brandName = settings?.public_app_name || appConfig.APP_NAME || 'Perfeitos Presentes';
+    const projectImageUrl = normalizeExternalUrl(quote.project_image_url);
     const shareText = buildQuoteShareText({
       brandName,
       pieceName: quote.piece_name,
       finalPriceFormatted: formatCurrency(quote.final_price),
       storeUrl: 'https://loja.infinitepay.io/perfeitos_presentes',
       instagramHandle: '@perfeitos.presentes',
+      projectImageUrl,
     });
 
     const sharePayload = {
@@ -382,16 +445,32 @@ export async function attachQuotesEvents(refresh) {
       text: shareText,
     };
 
+    const files = [];
+    let logoFile = null;
+    let projectImageFile = null;
+
     try {
-      const response = await fetch('./assets/perfeitos-presentes-logo.png');
-      if (response.ok) {
-        const blob = await response.blob();
-        const file = new File([blob], 'perfeitos-presentes-logo.png', { type: blob.type || 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          sharePayload.files = [file];
-        }
-      }
+      logoFile = await fetchImageFile('./assets/perfeitos-presentes-logo.png', 'perfeitos-presentes-logo');
+      files.push(logoFile);
     } catch (_) {}
+
+    if (projectImageUrl) {
+      try {
+        projectImageFile = await fetchImageFile(projectImageUrl, 'imagem-referencia-projeto');
+        files.push(projectImageFile);
+      } catch (_) {
+        // Alguns sites bloqueiam download externo por CORS. Nesses casos,
+        // o link da imagem continua no texto compartilhado como alternativa.
+      }
+    }
+
+    if (navigator.canShare && files.length && navigator.canShare({ files })) {
+      sharePayload.files = files;
+    } else if (navigator.canShare && projectImageFile && navigator.canShare({ files: [projectImageFile] })) {
+      sharePayload.files = [projectImageFile];
+    } else if (navigator.canShare && logoFile && navigator.canShare({ files: [logoFile] })) {
+      sharePayload.files = [logoFile];
+    }
 
     return sharePayload;
   }
