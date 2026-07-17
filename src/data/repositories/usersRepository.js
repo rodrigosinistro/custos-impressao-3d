@@ -10,6 +10,33 @@ function getInviteRedirectUrl() {
   return url.href;
 }
 
+async function invokeUserAction(body) {
+  const supabase = getSupabase();
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
+
+  if (sessionError || !accessToken) {
+    throw new Error('Sua sessão expirou. Entre novamente para continuar.');
+  }
+
+  const { data, error } = await supabase.functions.invoke('invite-user', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body,
+  });
+
+  if (error) {
+    let message = error.message;
+    try {
+      const details = await error.context?.json?.();
+      message = details?.error || details?.message || message;
+    } catch (_) {}
+    throw new Error(message || 'Não foi possível gerenciar o usuário.');
+  }
+
+  if (!data?.user) throw new Error('O Supabase não confirmou a operação.');
+  return data.user;
+}
+
 export const usersRepository = {
   async getAll() {
     const ownerId = authService.getAccountOwnerId();
@@ -26,24 +53,26 @@ export const usersRepository = {
   },
 
   async invite({ email, fullName }) {
-    const { data, error } = await getSupabase().functions.invoke('invite-user', {
-      body: {
-        email: String(email || '').trim().toLowerCase(),
-        fullName: String(fullName || '').trim(),
-        redirectTo: getInviteRedirectUrl(),
-      },
+    return invokeUserAction({
+      action: 'invite',
+      email: String(email || '').trim().toLowerCase(),
+      fullName: String(fullName || '').trim(),
+      redirectTo: getInviteRedirectUrl(),
     });
+  },
 
-    if (error) {
-      let message = error.message;
-      try {
-        const details = await error.context?.json?.();
-        message = details?.error || details?.message || message;
-      } catch (_) {}
-      throw new Error(message || 'Não foi possível enviar o convite.');
-    }
+  async sendPasswordReset(userId) {
+    return invokeUserAction({
+      action: 'reset-password',
+      userId: String(userId || ''),
+      redirectTo: getInviteRedirectUrl(),
+    });
+  },
 
-    if (!data?.user) throw new Error('O Supabase não confirmou o envio do convite.');
-    return data.user;
+  async remove(userId) {
+    return invokeUserAction({
+      action: 'delete',
+      userId: String(userId || ''),
+    });
   },
 };

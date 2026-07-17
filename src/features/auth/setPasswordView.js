@@ -6,8 +6,8 @@ export function renderSetPasswordView() {
     <div class="login-shell">
       <section class="card login-card">
         <div class="login-header">
-          <h1>Defina sua senha</h1>
-          <p>Finalize seu convite para acessar o Orçamento Fácil.</p>
+          <h1>Defina uma nova senha</h1>
+          <p>Crie ou atualize sua senha para acessar o sistema.</p>
         </div>
         <form id="setPasswordForm">
           <div class="field">
@@ -20,7 +20,7 @@ export function renderSetPasswordView() {
           </div>
           <div class="small-text">Use pelo menos 8 caracteres.</div>
           <div id="setPasswordFeedback"></div>
-          <button class="btn btn-primary" type="submit" id="setPasswordButton">Salvar senha e continuar</button>
+          <button class="btn btn-primary" type="submit" id="setPasswordButton">Salvar senha e entrar</button>
         </form>
       </section>
     </div>
@@ -57,7 +57,7 @@ export function attachSetPasswordEvents() {
     } catch (error) {
       feedback.innerHTML = `<div class="alert">${escapeHtml(error.message || 'Não foi possível salvar a senha.')}</div>`;
       button.disabled = false;
-      button.textContent = 'Salvar senha e continuar';
+      button.textContent = 'Salvar senha e entrar';
     }
   });
 }

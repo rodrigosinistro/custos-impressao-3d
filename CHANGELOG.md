@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.2.1
+- Simplificada a tela de entrada para exibir somente os campos **Usuário** e **Senha**.
+- Removidos da tela de entrada o cadastro público e os textos exclusivos de administrador.
+- Corrigido o login do perfil **Orçamentista**, que agora é direcionado ao **Orçamento Fácil** após a autenticação.
+- Adicionado o botão **Reenviar acesso** para o administrador enviar por e-mail um link de definição de nova senha.
+- Adicionado o botão **Excluir** para remover o acesso de um Orçamentista da equipe.
+- A exclusão é protegida por confirmação e não permite remover a conta administradora.
+- A Edge Function `invite-user` passou a validar e executar convite, redefinição de senha e exclusão de usuários da própria equipe.
+- O token da sessão administrativa passa a ser enviado explicitamente nas operações de usuários.
+- Nenhuma nova migração SQL é necessária; a Edge Function deve ser republicada.
+
 ## v1.2.0
 - Adicionado o módulo **Orçamento Fácil** com Cliente, Nome da peça, Peso e Tempo de produção.
 - O Orçamento Fácil usa a mesma regra de precificação do orçamento completo, com impressora, material, taxas e margens definidos pelo administrador.

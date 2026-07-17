@@ -1,6 +1,6 @@
 # Custos de Impressão 3D — Perfeitos Presentes
 
-**Versão atual:** `v1.2.0`
+**Versão atual:** `v1.2.1`
 
 Sistema web estático para calcular custos e orçamentos de impressão 3D, com banco real no Supabase, autenticação, RLS e publicação pelo GitHub Pages.
 
@@ -13,15 +13,14 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 
 ## O que o sistema faz
 
-- Login administrativo com **Supabase Auth**.
+- Login simplificado para Administradores e Orçamentistas com **Supabase Auth**.
 - Proteção dos dados com **Row Level Security (RLS)**.
-- Administração de equipe com convite por e-mail e perfis **Administrador** e **Orçamentista**.
+- Administração de equipe com convite por e-mail, reenvio de acesso, redefinição de senha e exclusão de Orçamentistas.
 - Novo módulo **Orçamento Fácil**, que calcula o valor final usando somente cliente, peça, peso e tempo.
 - Impressora e material padrão do Orçamento Fácil definidos pelo administrador nas Configurações.
 - Orçamentistas podem salvar, compartilhar e enviar orçamentos fáceis para a produção.
 - Orçamentistas visualizam a fila de produção em modo consulta, sem editar itens ou alterar status.
 - Cadastro e gerenciamento de clientes, impressoras e materiais.
-- Cadastro público de cliente, salvando direto no banco.
 - Cálculo de orçamento com custo de material, energia, depreciação, manutenção, falha, embalagem, frete, impostos, taxa de cartão e margem.
 - Mão de obra e pintura calculadas automaticamente como **10% do valor calculado**, antes do arredondamento.
 - Preço final ao cliente com sugestão automática sempre arredondada **para cima** no padrão **X,99**, além de preço manual e desconto em reais.
@@ -42,6 +41,7 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Para atualizar uma instalação anterior à `v1.1.11`, execute a migração `supabase/migrations/v1.1.11-production.sql` no SQL Editor do Supabase.
 - Para usar a `v1.1.14`, execute também a migração `supabase/migrations/v1.1.14-project-links.sql`.
 - Para usar a `v1.2.0`, execute também `supabase/migrations/v1.2.0-easy-quotes-and-users.sql` e publique a Edge Function `invite-user`.
+- Para atualizar para a `v1.2.1`, não há nova migração SQL; publique novamente a Edge Function `invite-user`.
 
 ## Configuração
 
@@ -59,13 +59,14 @@ window.APP_CONFIG = {
 
 ## Como publicar
 
-1. **Atualizando a v1.1.14:** execute `supabase/migrations/v1.2.0-easy-quotes-and-users.sql` no SQL Editor do Supabase.
-2. **Vindo de uma versão anterior:** execute primeiro as migrações anteriores necessárias e deixe `v1.2.0-easy-quotes-and-users.sql` por último.
-3. **Instalação nova:** execute somente o `supabase/schema.sql` completo.
-4. Em **Authentication > URL Configuration**, adicione `https://rodrigosinistro.github.io/custos-impressao-3d/?invite=1` às URLs de redirecionamento permitidas.
-5. Publique `supabase/functions/invite-user` como Edge Function autenticada do Supabase.
-6. Nas Configurações do sistema, confirme a impressora e o material usados pelo Orçamento Fácil.
-7. Suba os arquivos para o repositório e publique pelo GitHub Pages.
+1. **Atualizando a v1.2.0:** não execute SQL; apenas republique a Edge Function `invite-user` e envie os arquivos da v1.2.1.
+2. **Atualizando a v1.1.14:** execute `supabase/migrations/v1.2.0-easy-quotes-and-users.sql` no SQL Editor do Supabase.
+3. **Vindo de uma versão anterior:** execute primeiro as migrações anteriores necessárias e deixe `v1.2.0-easy-quotes-and-users.sql` por último.
+4. **Instalação nova:** execute somente o `supabase/schema.sql` completo.
+5. Em **Authentication > URL Configuration**, adicione `https://rodrigosinistro.github.io/custos-impressao-3d/?invite=1` às URLs de redirecionamento permitidas.
+6. Publique `supabase/functions/invite-user` como Edge Function autenticada do Supabase.
+7. Nas Configurações do sistema, confirme a impressora e o material usados pelo Orçamento Fácil.
+8. Suba os arquivos para o repositório e publique pelo GitHub Pages.
 
 ## Observações de uso
 

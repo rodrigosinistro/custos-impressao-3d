@@ -412,6 +412,13 @@ textarea {
   color: #bbf7d0;
 }
 
+.btn-compact {
+  min-height: 38px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
 .table-wrap {
   width: 100%;
   min-width: 0;
@@ -424,6 +431,19 @@ table {
   width: 100%;
   min-width: 620px;
   border-collapse: collapse;
+}
+
+.users-table {
+  min-width: 860px;
+}
+
+.users-table td:last-child {
+  min-width: 260px;
+}
+
+.user-action-buttons {
+  flex-wrap: nowrap;
+  gap: 8px;
 }
 
 th,

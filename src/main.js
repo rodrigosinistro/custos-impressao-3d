@@ -107,10 +107,9 @@ async function render() {
     const hash = guardRoute(getCurrentHash());
 
     if (hash === '#/login') {
-      const publicSettings = await settingsRepository.getPublicSite();
       if (currentRender !== renderCounter) return;
-      app.innerHTML = renderAuthView({ publicSettings });
-      attachAuthEvents(refresh);
+      app.innerHTML = renderAuthView();
+      attachAuthEvents();
       return;
     }
 
@@ -159,7 +158,7 @@ async function render() {
       },
       '#/users': {
         title: 'Usuários',
-        subtitle: 'Convide orçamentistas e consulte sua equipe.',
+        subtitle: 'Convide orçamentistas, reenvie acessos e gerencie sua equipe.',
         view: renderUsersView,
         attach: attachUsersEvents,
       },
