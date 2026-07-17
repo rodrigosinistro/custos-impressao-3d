@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   default_labor_cost: 0,
   default_finishing_cost: 0,
   default_packaging_cost: 0,
+  default_printer_id: null,
+  default_material_id: null,
   allow_public_client_signup: true,
 };
 
@@ -35,7 +37,7 @@ export const settingsRepository = {
   },
 
   async getMine() {
-    const ownerId = authService.getUserId();
+    const ownerId = authService.getAccountOwnerId();
     if (!ownerId) throw new Error('Sessão não encontrada.');
     const { data, error } = await getSupabase()
       .from('site_settings')
@@ -47,7 +49,7 @@ export const settingsRepository = {
   },
 
   async save(nextSettings) {
-    const ownerId = authService.getUserId();
+    const ownerId = authService.getAccountOwnerId();
     if (!ownerId) throw new Error('Sessão não encontrada.');
     const payload = {
       ...DEFAULT_SETTINGS,
@@ -65,7 +67,7 @@ export const settingsRepository = {
   },
 
   async exportSnapshot() {
-    const ownerId = authService.getUserId();
+    const ownerId = authService.getAccountOwnerId();
     if (!ownerId) throw new Error('Sessão não encontrada.');
     const supabase = getSupabase();
     const [settings, clients, printers, materials, quotes] = await Promise.all([

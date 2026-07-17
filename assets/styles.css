@@ -181,6 +181,16 @@ svg {
   padding-top: 24px;
 }
 
+.role-label {
+  display: block;
+  margin-top: 5px;
+  color: #bae6fd;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .sidebar-user {
   overflow-wrap: anywhere;
 }
@@ -516,6 +526,33 @@ th {
 
 .summary-box strong {
   font-size: 1.45rem;
+}
+
+.easy-price-card {
+  align-self: start;
+}
+
+.easy-price-box {
+  display: grid;
+  gap: 12px;
+  padding: 28px;
+  text-align: center;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(56, 189, 248, 0.12), rgba(2, 8, 23, 0.45));
+}
+
+.easy-price-label {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.easy-price-value {
+  color: #bae6fd;
+  font-size: clamp(2.25rem, 6vw, 3.6rem);
+  font-weight: 800;
+  line-height: 1;
+  overflow-wrap: anywhere;
 }
 
 .summary-line {

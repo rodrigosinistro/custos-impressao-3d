@@ -5,12 +5,15 @@ import { authService } from './domain/services/authService.js';
 import { qs } from './core/utils/dom.js';
 import { settingsRepository } from './data/repositories/settingsRepository.js';
 import { renderAuthView, attachAuthEvents } from './features/auth/authView.js';
+import { renderSetPasswordView, attachSetPasswordEvents } from './features/auth/setPasswordView.js';
 import { renderDashboardView } from './features/dashboard/dashboardView.js';
 import { renderClientsView, attachClientsEvents } from './features/clients/clientsView.js';
 import { renderPrintersView, attachPrintersEvents } from './features/printers/printersView.js';
 import { renderMaterialsView, attachMaterialsEvents } from './features/materials/materialsView.js';
 import { renderQuotesView, attachQuotesEvents } from './features/quotes/quotesView.js';
+import { renderEasyQuoteView, attachEasyQuoteEvents } from './features/easyQuote/easyQuoteView.js';
 import { renderProductionView, attachProductionEvents } from './features/production/productionView.js';
+import { renderUsersView, attachUsersEvents } from './features/users/usersView.js';
 import { renderSettingsView, attachSettingsEvents } from './features/settings/settingsView.js';
 
 const app = document.getElementById('app');
@@ -92,6 +95,15 @@ async function render() {
 
   try {
     await authService.initialize();
+
+    const isInviteSetup = new URLSearchParams(window.location.search).get('invite') === '1';
+    if (isInviteSetup && authService.isAuthenticated()) {
+      if (currentRender !== renderCounter) return;
+      app.innerHTML = renderSetPasswordView();
+      attachSetPasswordEvents();
+      return;
+    }
+
     const hash = guardRoute(getCurrentHash());
 
     if (hash === '#/login') {
@@ -133,11 +145,23 @@ async function render() {
         view: renderQuotesView,
         attach: attachQuotesEvents,
       },
+      '#/easy-quote': {
+        title: 'Orçamento Fácil',
+        subtitle: 'Informe cliente, peça, peso e tempo para calcular o valor final.',
+        view: renderEasyQuoteView,
+        attach: attachEasyQuoteEvents,
+      },
       '#/production': {
         title: 'Produção',
         subtitle: 'Controle a fila de peças aprovadas e o prazo de produção de até 7 dias.',
         view: renderProductionView,
         attach: attachProductionEvents,
+      },
+      '#/users': {
+        title: 'Usuários',
+        subtitle: 'Convide orçamentistas e consulte sua equipe.',
+        view: renderUsersView,
+        attach: attachUsersEvents,
       },
       '#/settings': {
         title: 'Configurações',

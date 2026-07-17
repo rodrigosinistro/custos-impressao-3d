@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.2.0
+- Adicionado o módulo **Orçamento Fácil** com Cliente, Nome da peça, Peso e Tempo de produção.
+- O Orçamento Fácil usa a mesma regra de precificação do orçamento completo, com impressora, material, taxas e margens definidos pelo administrador.
+- Adicionadas ações para salvar, compartilhar e enviar o orçamento fácil diretamente para a fila de produção.
+- Criado o perfil **Orçamentista**, com acesso somente ao Orçamento Fácil e à visualização da Produção.
+- A Produção passa a ser exibida em modo somente leitura para orçamentistas, sem edição, exclusão ou alteração de status.
+- Adicionada a tela **Usuários**, exclusiva do administrador, para convidar orçamentistas por e-mail.
+- Adicionado o fluxo para o convidado definir a própria senha ao aceitar o convite.
+- Os registros da equipe passam a compartilhar o mesmo proprietário da conta, mantendo clientes, parâmetros, orçamentos e produção centralizados.
+- Reestruturadas as políticas RLS para aplicar as permissões de Administrador e Orçamentista diretamente no Supabase.
+- Removida a antiga possibilidade de um usuário alterar o próprio perfil e promover a si mesmo pelo banco.
+- Adicionada a Edge Function segura `invite-user`; a chave administrativa não é exposta no navegador.
+- Adicionada a migração `supabase/migrations/v1.2.0-easy-quotes-and-users.sql`.
+
 ## v1.1.14
 - Adicionados os campos **Link Projeto** e **Link Imagem do Projeto** logo abaixo de Cliente e Nome da peça no formulário de orçamento.
 - Os dois links passam a ser salvos e restaurados ao editar um orçamento.

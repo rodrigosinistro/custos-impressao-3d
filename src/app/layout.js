@@ -5,7 +5,7 @@ import { escapeHtml } from '../core/utils/dom.js';
 export function renderShell({ currentHash, title, subtitle, content, settings }) {
   const appName = settings?.public_app_name || 'Custos de Impressão 3D';
   const navLinks = routes
-    .filter((route) => route.requiresAuth)
+    .filter((route) => route.requiresAuth && route.showInNav !== false && authService.canAccessRoles(route.roles))
     .map(
       (route) => `
         <a class="nav-link ${currentHash === route.hash ? 'active' : ''}" href="${route.hash}">${escapeHtml(route.label)}</a>
@@ -45,6 +45,7 @@ export function renderShell({ currentHash, title, subtitle, content, settings })
         <div class="sidebar-footer">
           <div class="small-text sidebar-user">
             Logado como <b>${escapeHtml(authService.getState().user?.email || '---')}</b>
+            <span class="role-label">${authService.isAdmin() ? 'Administrador' : 'Orçamentista'}</span>
           </div>
           <button class="btn btn-danger" id="logoutButton">Sair</button>
         </div>

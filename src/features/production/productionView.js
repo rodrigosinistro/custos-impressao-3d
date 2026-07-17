@@ -1,4 +1,5 @@
 import { productionRepository } from '../../data/repositories/productionRepository.js';
+import { authService } from '../../domain/services/authService.js';
 import { formatCurrency, formatDateTime, formatMinutes } from '../../core/utils/format.js';
 import { qs, on, escapeHtml } from '../../core/utils/dom.js';
 import { toInt, toNumber } from '../../core/utils/parse.js';
@@ -87,7 +88,7 @@ function renderNextAction(item) {
   return '';
 }
 
-function renderProductionRows(items) {
+function renderProductionRows(items, canManage = true) {
   return items.map((item, index) => `
     <tr class="${isOverdue(item) ? 'row-overdue' : ''}">
       <td><b>#${index + 1}</b></td>
@@ -101,13 +102,15 @@ function renderProductionRows(items) {
       <td>${escapeHtml(deadlineText(item))}</td>
       <td>${formatMinutes(item.print_time_minutes)}</td>
       <td>${formatCurrency(item.final_price)}</td>
-      <td>
-        <div class="button-row compact-row">
-          ${renderNextAction(item)}
-          <button class="btn btn-secondary" data-edit-production="${item.id}">Editar</button>
-          <button class="btn btn-danger" data-remove-production="${item.id}">Excluir</button>
-        </div>
-      </td>
+      ${canManage ? `
+        <td>
+          <div class="button-row compact-row">
+            ${renderNextAction(item)}
+            <button class="btn btn-secondary" data-edit-production="${item.id}">Editar</button>
+            <button class="btn btn-danger" data-remove-production="${item.id}">Excluir</button>
+          </div>
+        </td>
+      ` : ''}
     </tr>
   `).join('');
 }
@@ -124,6 +127,7 @@ export async function renderProductionView() {
   const items = await productionRepository.getAll();
   const kpis = productionKpis(items);
   const activeItems = items.filter((item) => item.status !== 'delivered' && item.status !== 'canceled');
+  const canManage = authService.isAdmin();
 
   return `
     <div class="grid grid-4">
@@ -135,25 +139,25 @@ export async function renderProductionView() {
 
     <section class="card section-card" style="margin-top:18px;">
       <h3>Controle de produção</h3>
-      <div class="notice">A fila abaixo é exibida em <b>ordem de chegada</b>. Ao aprovar um orçamento, o item entra automaticamente com prazo de <b>7 dias</b> para produção.</div>
+      <div class="notice">A fila abaixo é exibida em <b>ordem de chegada</b>. Ao aprovar um orçamento, o item entra automaticamente com prazo de <b>7 dias</b> para produção.${canManage ? '' : ' Seu acesso a esta tela é somente para consulta.'}</div>
     </section>
 
-    <div class="two-column" style="margin-top:18px;">
+    <div class="${canManage ? 'two-column' : ''}" style="margin-top:18px;">
       <section class="card section-card">
         <h3>Fila de produção</h3>
         ${activeItems.length ? `
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Ordem</th><th>Peça</th><th>Cliente</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Tempo</th><th>Valor</th><th></th></tr>
+                <tr><th>Ordem</th><th>Peça</th><th>Cliente</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Tempo</th><th>Valor</th>${canManage ? '<th></th>' : ''}</tr>
               </thead>
-              <tbody>${renderProductionRows(activeItems)}</tbody>
+              <tbody>${renderProductionRows(activeItems, canManage)}</tbody>
             </table>
           </div>
-        ` : '<div class="empty-state">Nenhum item na fila. Aprove um orçamento ou cadastre uma produção avulsa.</div>'}
+        ` : `<div class="empty-state">${canManage ? 'Nenhum item na fila. Aprove um orçamento ou cadastre uma produção avulsa.' : 'Nenhum item na fila de produção.'}</div>`}
       </section>
 
-      <section class="card section-card">
+      ${canManage ? `<section class="card section-card">
         <h3 id="productionFormTitle">Produção avulsa</h3>
         <form id="productionForm">
           <input type="hidden" name="id" />
@@ -184,7 +188,7 @@ export async function renderProductionView() {
             <button class="btn btn-ghost" type="button" id="cancelEditProductionButton" hidden>Cancelar edição</button>
           </div>
         </form>
-      </section>
+      </section>` : ''}
     </div>
 
     <section class="card section-card" style="margin-top:18px;">
@@ -192,7 +196,7 @@ export async function renderProductionView() {
       ${items.filter((item) => item.status === 'delivered' || item.status === 'canceled').length ? `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Peça</th><th>Cliente</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Valor</th><th></th></tr></thead>
+            <thead><tr><th>Peça</th><th>Cliente</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Valor</th>${canManage ? '<th></th>' : ''}</tr></thead>
             <tbody>
               ${items.filter((item) => item.status === 'delivered' || item.status === 'canceled').map((item) => `
                 <tr>
@@ -202,7 +206,7 @@ export async function renderProductionView() {
                   <td>${formatDateTime(item.queued_at || item.created_at)}</td>
                   <td>${formatDateOnly(item.due_date)}</td>
                   <td>${formatCurrency(item.final_price)}</td>
-                  <td><button class="btn btn-secondary" data-edit-production="${item.id}">Editar</button></td>
+                  ${canManage ? `<td><button class="btn btn-secondary" data-edit-production="${item.id}">Editar</button></td>` : ''}
                 </tr>
               `).join('')}
             </tbody>
@@ -214,6 +218,7 @@ export async function renderProductionView() {
 }
 
 export async function attachProductionEvents(refresh) {
+  if (!authService.isAdmin()) return;
   const form = qs('#productionForm');
   const feedback = qs('#productionFeedback');
   const formTitle = qs('#productionFormTitle');

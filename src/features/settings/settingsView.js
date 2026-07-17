@@ -1,6 +1,16 @@
 import { settingsRepository } from '../../data/repositories/settingsRepository.js';
-import { qs } from '../../core/utils/dom.js';
+import { printersRepository } from '../../data/repositories/printersRepository.js';
+import { materialsRepository } from '../../data/repositories/materialsRepository.js';
+import { qs, escapeHtml } from '../../core/utils/dom.js';
 import { toNumber } from '../../core/utils/parse.js';
+
+function buildDefaultOptions(items, selectedId, placeholder) {
+  return [`<option value="">${placeholder}</option>`]
+    .concat(items.map((item) => `
+      <option value="${item.id}" ${item.id === selectedId ? 'selected' : ''}>${escapeHtml(item.name)}</option>
+    `))
+    .join('');
+}
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -13,7 +23,11 @@ function downloadJson(filename, data) {
 }
 
 export async function renderSettingsView() {
-  const settings = await settingsRepository.getMine();
+  const [settings, printers, materials] = await Promise.all([
+    settingsRepository.getMine(),
+    printersRepository.getAll(),
+    materialsRepository.getAll(),
+  ]);
 
   return `
     <div class="grid grid-2">
@@ -30,6 +44,8 @@ export async function renderSettingsView() {
             <div class="field"><label>Imposto padrão (%)</label><input name="defaultTaxRate" inputmode="decimal" value="${settings.default_tax_rate}" /></div>
             <div class="field"><label>Taxa de cartão (%)</label><input name="defaultCardFeeRate" inputmode="decimal" value="${settings.default_card_fee_rate}" /></div>
             <div class="field"><label>Embalagem padrão</label><input name="defaultPackagingCost" inputmode="decimal" value="${settings.default_packaging_cost}" /></div>
+            <div class="field"><label>Impressora do Orçamento Fácil</label><select name="defaultPrinterId">${buildDefaultOptions(printers, settings.default_printer_id, 'Selecione a impressora')}</select></div>
+            <div class="field"><label>Material do Orçamento Fácil</label><select name="defaultMaterialId">${buildDefaultOptions(materials, settings.default_material_id, 'Selecione o material')}</select></div>
             <div class="field checkbox-field"><label><input name="allowPublicClientSignup" type="checkbox" ${settings.allow_public_client_signup ? 'checked' : ''} /> Permitir cadastro público</label></div>
           </div>
           <div class="notice" style="margin-bottom:12px;">
@@ -76,6 +92,8 @@ export function attachSettingsEvents(refresh) {
         default_tax_rate: toNumber(formData.get('defaultTaxRate')),
         default_card_fee_rate: toNumber(formData.get('defaultCardFeeRate')),
         default_packaging_cost: toNumber(formData.get('defaultPackagingCost')),
+        default_printer_id: String(formData.get('defaultPrinterId') || '').trim() || null,
+        default_material_id: String(formData.get('defaultMaterialId') || '').trim() || null,
         allow_public_client_signup: formData.get('allowPublicClientSignup') === 'on',
       });
       feedback.innerHTML = '<div class="notice success">Configurações salvas.</div>';

@@ -16,6 +16,7 @@ function snapshot() {
     userId: state.user?.id ?? null,
     accessToken: state.session?.access_token ?? null,
     role: state.profile?.role ?? null,
+    accountOwnerId: state.profile?.account_owner_id ?? null,
   });
 }
 
@@ -148,8 +149,32 @@ export const authService = {
     return state.profile?.role === 'admin';
   },
 
+  isStaff() {
+    return state.profile?.role === 'staff';
+  },
+
+  getRole() {
+    return state.profile?.role ?? null;
+  },
+
+  getAccountOwnerId() {
+    return state.profile?.account_owner_id || state.user?.id || null;
+  },
+
+  canAccessRoles(roles = []) {
+    if (!roles.length) return true;
+    return roles.includes(state.profile?.role);
+  },
+
   getUserId() {
     return state.user?.id ?? null;
+  },
+
+  async updatePassword(password) {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+    return data;
   },
 
   subscribe(listener) {

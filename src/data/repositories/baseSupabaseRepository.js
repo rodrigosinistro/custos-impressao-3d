@@ -2,7 +2,7 @@ import { getSupabase } from '../../lib/supabaseClient.js';
 import { authService } from '../../domain/services/authService.js';
 
 function getOwnerId() {
-  const ownerId = authService.getUserId();
+  const ownerId = authService.getAccountOwnerId();
   if (!ownerId) throw new Error('Sessão não encontrada.');
   return ownerId;
 }
