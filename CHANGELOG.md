@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.2
+- Adicionados os campos **Link do Projeto** e **Observações** ao formulário do Orçamento Fácil.
+- O link e as observações são salvos, exibidos no histórico e restaurados durante a edição.
+- Adicionado o botão **Editar** no histórico do Orçamento Fácil para Administradores e Orçamentistas.
+- O formulário passa a indicar o modo de edição e permite cancelar as alterações antes de salvar.
+- Orçamentos já enviados podem ser editados sem modificar automaticamente o item existente na fila de produção.
+- Adicionada a política RLS `quotes_staff_update`, limitada a Orçamentos Fáceis da própria equipe.
+- Adicionada a migração `supabase/migrations/v1.2.2-easy-quote-editing.sql`.
+
 ## v1.2.1
 - Simplificada a tela de entrada para exibir somente os campos **Usuário** e **Senha**.
 - Removidos da tela de entrada o cadastro público e os textos exclusivos de administrador.

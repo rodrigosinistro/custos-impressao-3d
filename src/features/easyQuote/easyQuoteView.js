@@ -47,13 +47,38 @@ function calculateEasyQuote({ weightG, printTimeMinutes, settings, printer, mate
   });
 }
 
+function setFormValue(form, name, value) {
+  const field = qs(`[name="${name}"]`, form);
+  if (!field) return;
+  field.value = value ?? '';
+}
+
+function normalizeExternalUrl(value) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return '';
+
+  try {
+    const url = new URL(rawValue);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function renderProjectLink(quote) {
+  const projectLink = normalizeExternalUrl(quote.project_link);
+  if (!projectLink) return '-';
+
+  return `<a class="btn btn-ghost btn-compact" href="${escapeHtml(projectLink)}" target="_blank" rel="noopener noreferrer">Abrir projeto</a>`;
+}
+
 function buildQuotePayload({ formData, client, settings, printer, material, result }) {
   return {
     quote_mode: 'easy',
     client_id: client?.id || null,
     client_name: String(formData.get('clientName') || '').trim(),
     piece_name: String(formData.get('pieceName') || '').trim(),
-    project_link: null,
+    project_link: String(formData.get('projectLink') || '').trim() || null,
     project_image_url: null,
     printer_id: printer.id,
     printer_name: printer.name || '',
@@ -74,7 +99,7 @@ function buildQuotePayload({ formData, client, settings, printer, material, resu
     discount_amount: 0,
     adjusted_price: result.adjustedPrice,
     calculated_final_price: result.calculatedFinalPrice,
-    notes: 'Criado pelo módulo Orçamento Fácil.',
+    notes: String(formData.get('notes') || '').trim() || null,
     cost_material: result.costMaterial,
     cost_energy: result.costEnergy,
     cost_depreciation: result.costDepreciation,
@@ -150,8 +175,9 @@ export async function renderEasyQuoteView() {
   return `
     <div class="two-column easy-quote-layout">
       <section class="card section-card">
-        <h3>Novo orçamento fácil</h3>
+        <h3 id="easyQuoteFormTitle">Novo orçamento fácil</h3>
         <form id="easyQuoteForm">
+          <input type="hidden" name="id" />
           <div class="form-grid">
             <div class="field">
               <label>Cliente</label>
@@ -163,6 +189,16 @@ export async function renderEasyQuoteView() {
             <div class="field"><label>Nome da peça</label><input name="pieceName" required /></div>
           </div>
           <div class="form-grid">
+            <div class="field form-grid-full">
+              <label>Link do Projeto</label>
+              <input name="projectLink" type="url" inputmode="url" placeholder="https://..." />
+            </div>
+          </div>
+          <div class="field">
+            <label>Observações</label>
+            <textarea name="notes" placeholder="Detalhes, cores, acabamento ou outras informações do projeto..."></textarea>
+          </div>
+          <div class="form-grid">
             <div class="field"><label>Peso (g)</label><input name="weightG" inputmode="decimal" min="0.01" value="100" required /></div>
             <div class="field"><label>Tempo de produção (min)</label><input name="printTimeMinutes" inputmode="numeric" min="1" value="180" required /></div>
           </div>
@@ -171,8 +207,9 @@ export async function renderEasyQuoteView() {
           </div>
           <div id="easyQuoteFeedback"></div>
           <div class="button-row">
-            <button class="btn btn-primary" type="submit" data-easy-action="save">Salvar orçamento</button>
-            <button class="btn btn-success" type="submit" data-easy-action="produce">Salvar e enviar à produção</button>
+            <button class="btn btn-primary" id="saveEasyQuoteButton" type="submit" data-easy-action="save">Salvar orçamento</button>
+            <button class="btn btn-success" id="produceEasyQuoteButton" type="submit" data-easy-action="produce">Salvar e enviar à produção</button>
+            <button class="btn btn-ghost" id="cancelEditEasyQuoteButton" type="button" hidden>Cancelar edição</button>
           </div>
         </form>
       </section>
@@ -188,7 +225,7 @@ export async function renderEasyQuoteView() {
       ${easyQuotes.length ? `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Peça</th><th>Cliente</th><th>Peso</th><th>Tempo</th><th>Valor</th><th>Data</th><th></th></tr></thead>
+            <thead><tr><th>Peça</th><th>Cliente</th><th>Projeto</th><th>Observações</th><th>Peso</th><th>Tempo</th><th>Valor</th><th>Data</th><th></th></tr></thead>
             <tbody>
               ${easyQuotes.map((quote) => {
                 const wasSentToProduction = producedQuoteIds.has(String(quote.id));
@@ -196,12 +233,15 @@ export async function renderEasyQuoteView() {
                   <tr>
                     <td><b>${escapeHtml(quote.piece_name)}</b></td>
                     <td>${escapeHtml(quote.client_name || '-')}</td>
+                    <td>${renderProjectLink(quote)}</td>
+                    <td>${escapeHtml(quote.notes || '-')}</td>
                     <td>${Number(quote.weight_g || 0).toLocaleString('pt-BR')} g</td>
                     <td>${formatMinutes(quote.print_time_minutes)}</td>
                     <td>${formatCurrency(quote.final_price)}</td>
                     <td>${formatDateTime(quote.created_at)}</td>
                     <td>
                       <div class="button-row compact-row">
+                        <button class="btn btn-secondary" data-easy-edit="${quote.id}">Editar</button>
                         ${wasSentToProduction
                           ? '<button class="btn btn-success" type="button" disabled>ENVIADO</button>'
                           : `<button class="btn btn-success" data-easy-produce="${quote.id}">Enviar à produção</button>`}
@@ -225,14 +265,22 @@ export async function attachEasyQuoteEvents(refresh) {
 
   const preview = qs('#easyQuotePreview');
   const feedback = qs('#easyQuoteFeedback');
-  const [clients, printers, materials, settings] = await Promise.all([
+  const cancelEditButton = qs('#cancelEditEasyQuoteButton');
+  const formTitle = qs('#easyQuoteFormTitle');
+  const saveButton = qs('#saveEasyQuoteButton');
+  const produceButton = qs('#produceEasyQuoteButton');
+  const [clients, printers, materials, settings, productionItems] = await Promise.all([
     clientDirectoryRepository.getAll(),
     printersRepository.getAll(),
     materialsRepository.getAll(),
     settingsRepository.getMine(),
+    productionRepository.getAll(),
   ]);
   const { printer, material } = resolveDefaults({ settings, printers, materials });
   if (!printer || !material) return;
+  const producedQuoteIds = new Set(
+    productionItems.filter((item) => item.quote_id).map((item) => String(item.quote_id)),
+  );
 
   const updatePreview = () => {
     const formData = new FormData(form);
@@ -247,10 +295,49 @@ export async function attachEasyQuoteEvents(refresh) {
     return { formData, result };
   };
 
+  const resetFormState = () => {
+    form.reset();
+    setFormValue(form, 'id', '');
+    setFormValue(form, 'weightG', '100');
+    setFormValue(form, 'printTimeMinutes', '180');
+    cancelEditButton.hidden = true;
+    produceButton.hidden = false;
+    formTitle.textContent = 'Novo orçamento fácil';
+    saveButton.textContent = 'Salvar orçamento';
+    produceButton.textContent = 'Salvar e enviar à produção';
+    feedback.innerHTML = '';
+    updatePreview();
+  };
+
+  const fillFormFromQuote = (quote) => {
+    const wasSentToProduction = producedQuoteIds.has(String(quote.id));
+    setFormValue(form, 'id', quote.id);
+    setFormValue(form, 'clientName', quote.client_name || '');
+    setFormValue(form, 'pieceName', quote.piece_name || '');
+    setFormValue(form, 'projectLink', quote.project_link || '');
+    setFormValue(form, 'notes', quote.notes || '');
+    setFormValue(form, 'weightG', quote.weight_g ?? '');
+    setFormValue(form, 'printTimeMinutes', quote.print_time_minutes ?? '');
+
+    cancelEditButton.hidden = false;
+    produceButton.hidden = wasSentToProduction;
+    formTitle.textContent = `Editando orçamento: ${quote.piece_name}`;
+    saveButton.textContent = 'Salvar alterações';
+    produceButton.textContent = 'Salvar alterações e enviar à produção';
+    feedback.innerHTML = wasSentToProduction
+      ? '<div class="notice">Você está editando um orçamento que já foi enviado. As alterações serão salvas no orçamento, sem modificar o item existente na fila de produção.</div>'
+      : '<div class="notice">Você está editando um orçamento fácil salvo.</div>';
+    updatePreview();
+    qs('[name="pieceName"]', form)?.focus();
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   form.addEventListener('input', updatePreview);
+  cancelEditButton.addEventListener('click', resetFormState);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const { formData, result } = updatePreview();
+    const quoteId = String(formData.get('id') || '').trim();
     const clientName = String(formData.get('clientName') || '').trim();
     const client = clients.find((item) => item.name.toLocaleLowerCase('pt-BR') === clientName.toLocaleLowerCase('pt-BR')) || null;
     const action = event.submitter?.dataset.easyAction || 'save';
@@ -265,18 +352,26 @@ export async function attachEasyQuoteEvents(refresh) {
     feedback.innerHTML = '';
 
     try {
-      const saved = await quotesRepository.save(buildQuotePayload({
-        formData,
-        client,
-        settings,
-        printer,
-        material,
-        result,
-      }));
+      const saved = await quotesRepository.save({
+        ...(quoteId ? { id: quoteId } : {}),
+        ...buildQuotePayload({
+          formData,
+          client,
+          settings,
+          printer,
+          material,
+          result,
+        }),
+      });
 
       if (action === 'produce') {
         try {
-          await productionRepository.createFromQuote(saved);
+          const productionResult = await productionRepository.createFromQuote(saved);
+          if (productionResult.alreadyExisted) {
+            alert('Orçamento salvo. Este orçamento já estava na fila de produção; o item da fila não foi alterado.');
+            await refresh();
+            return;
+          }
         } catch (productionError) {
           alert(`O orçamento foi salvo, mas não pôde ser enviado para a produção: ${productionError.message || 'erro inesperado.'}`);
           await refresh();
@@ -287,11 +382,23 @@ export async function attachEasyQuoteEvents(refresh) {
         return;
       }
 
-      alert('Orçamento salvo com sucesso.');
+      alert(quoteId ? 'Orçamento atualizado com sucesso.' : 'Orçamento salvo com sucesso.');
       await refresh();
     } catch (error) {
       feedback.innerHTML = `<div class="alert">${escapeHtml(error.message || 'Não foi possível salvar o orçamento.')}</div>`;
       buttons.forEach((button) => { button.disabled = false; });
+    }
+  });
+
+  on('[data-easy-edit]', 'click', async (_, button) => {
+    try {
+      const quote = await quotesRepository.getById(button.dataset.easyEdit);
+      if (!quote || quote.quote_mode !== 'easy') {
+        throw new Error('Este registro não é um Orçamento Fácil válido.');
+      }
+      fillFormFromQuote(quote);
+    } catch (error) {
+      alert(error.message || 'Não foi possível carregar o orçamento para edição.');
     }
   });
 

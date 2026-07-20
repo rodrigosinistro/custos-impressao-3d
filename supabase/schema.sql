@@ -563,6 +563,7 @@ with check (
 drop policy if exists "quotes_owner_all" on public.quotes;
 drop policy if exists "quotes_team_select" on public.quotes;
 drop policy if exists "quotes_staff_insert" on public.quotes;
+drop policy if exists "quotes_staff_update" on public.quotes;
 drop policy if exists "quotes_admin_all" on public.quotes;
 create policy "quotes_team_select"
 on public.quotes
@@ -580,6 +581,21 @@ create policy "quotes_staff_insert"
 on public.quotes
 for insert
 to authenticated
+with check (
+  (select public.current_app_role()) = 'staff'
+  and owner_id = (select public.current_account_owner_id())
+  and quote_mode = 'easy'
+);
+
+create policy "quotes_staff_update"
+on public.quotes
+for update
+to authenticated
+using (
+  (select public.current_app_role()) = 'staff'
+  and owner_id = (select public.current_account_owner_id())
+  and quote_mode = 'easy'
+)
 with check (
   (select public.current_app_role()) = 'staff'
   and owner_id = (select public.current_account_owner_id())
