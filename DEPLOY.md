@@ -5,6 +5,14 @@
 - GitHub: https://github.com/rodrigosinistro/custos-impressao-3d
 - Pages: https://rodrigosinistro.github.io/custos-impressao-3d/
 
+## Atualização da v1.2.2 para v1.2.3
+
+Esta atualização altera somente o texto compartilhado dos orçamentos. Não é necessário executar SQL nem republicar a Edge Function.
+
+1. Extraia o pacote da v1.2.3.
+2. Envie todos os arquivos para a branch `main` do GitHub.
+3. Aguarde o GitHub Pages publicar e pressione `Ctrl + F5` ao abrir o sistema pela primeira vez.
+
 ## Atualização da v1.2.1 para v1.2.2
 
 Esta atualização exige somente uma nova política no banco. A Edge Function `invite-user` não mudou em relação à v1.2.1.
@@ -74,7 +82,7 @@ Depois configure a URL de redirecionamento, publique a Edge Function e envie os 
 
 ## Edge Function
 
-A função `invite-user`, atualizada na v1.2.1 e mantida sem alterações na v1.2.2, executa três operações protegidas:
+A função `invite-user`, atualizada na v1.2.1 e mantida sem alterações nas versões v1.2.2 e v1.2.3, executa três operações protegidas:
 
 - convidar um Orçamentista;
 - enviar um link para definição de nova senha;

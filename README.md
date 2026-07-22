@@ -1,6 +1,6 @@
 # Custos de Impressão 3D — Perfeitos Presentes
 
-**Versão atual:** `v1.2.2`
+**Versão atual:** `v1.2.3`
 
 Sistema web estático para calcular custos e orçamentos de impressão 3D, com banco real no Supabase, autenticação, RLS e publicação pelo GitHub Pages.
 
@@ -26,7 +26,7 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Preço final ao cliente com sugestão automática sempre arredondada **para cima** no padrão **X,99**, além de preço manual e desconto em reais.
 - Histórico de orçamentos salvos no Supabase, com links para o projeto e para a imagem de referência.
 - Edição, exclusão e compartilhamento de orçamentos.
-- Mensagem de compartilhamento personalizada para a **Perfeitos Presentes**, com loja, Instagram e imagem de referência do projeto quando cadastrada.
+- Mensagem de compartilhamento personalizada para a **Perfeitos Presentes**, com Instagram e imagem de referência do projeto quando cadastrada.
 - Novo módulo **Produção**, com fila em ordem de chegada, status do item e prazo padrão de até **7 dias**.
 - Botão **Aprovar e produzir** no histórico de orçamentos, enviando o orçamento direto para a fila e mudando para **ENVIADO PARA A PRODUÇÃO** após o envio.
 - Cadastro de produção avulsa para itens que não vieram de orçamento.
@@ -43,6 +43,7 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Para usar a `v1.2.0`, execute também `supabase/migrations/v1.2.0-easy-quotes-and-users.sql` e publique a Edge Function `invite-user`.
 - Para atualizar para a `v1.2.1`, não há nova migração SQL; publique novamente a Edge Function `invite-user`.
 - Para usar a `v1.2.2`, execute também `supabase/migrations/v1.2.2-easy-quote-editing.sql`; a Edge Function não mudou em relação à v1.2.1.
+- Para atualizar da `v1.2.2` para a `v1.2.3`, basta publicar os arquivos; não há nova migração SQL nem alteração na Edge Function.
 
 ## Configuração
 
@@ -60,15 +61,16 @@ window.APP_CONFIG = {
 
 ## Como publicar
 
-1. **Atualizando a v1.2.1:** execute `supabase/migrations/v1.2.2-easy-quote-editing.sql` no SQL Editor e envie os arquivos da v1.2.2. Não é necessário republicar a Edge Function.
-2. **Atualizando a v1.2.0:** republique a Edge Function `invite-user`, execute a migração da v1.2.2 e envie os arquivos atuais.
-3. **Atualizando a v1.1.14:** execute, na ordem, `v1.2.0-easy-quotes-and-users.sql` e `v1.2.2-easy-quote-editing.sql`.
-4. **Vindo de uma versão anterior:** execute primeiro as migrações anteriores necessárias e deixe `v1.2.2-easy-quote-editing.sql` por último.
-5. **Instalação nova:** execute somente o `supabase/schema.sql` completo.
-6. Em **Authentication > URL Configuration**, adicione `https://rodrigosinistro.github.io/custos-impressao-3d/?invite=1` às URLs de redirecionamento permitidas.
-7. Publique `supabase/functions/invite-user` como Edge Function autenticada do Supabase quando estiver vindo de uma versão anterior à v1.2.1.
-8. Nas Configurações do sistema, confirme a impressora e o material usados pelo Orçamento Fácil.
-9. Suba os arquivos para o repositório e publique pelo GitHub Pages.
+1. **Atualizando a v1.2.2:** envie os arquivos da v1.2.3. Não é necessário executar SQL nem republicar a Edge Function.
+2. **Atualizando a v1.2.1:** execute `supabase/migrations/v1.2.2-easy-quote-editing.sql` no SQL Editor e envie os arquivos atuais. Não é necessário republicar a Edge Function.
+3. **Atualizando a v1.2.0:** republique a Edge Function `invite-user`, execute a migração da v1.2.2 e envie os arquivos atuais.
+4. **Atualizando a v1.1.14:** execute, na ordem, `v1.2.0-easy-quotes-and-users.sql` e `v1.2.2-easy-quote-editing.sql`.
+5. **Vindo de uma versão anterior:** execute primeiro as migrações anteriores necessárias e deixe `v1.2.2-easy-quote-editing.sql` por último.
+6. **Instalação nova:** execute somente o `supabase/schema.sql` completo.
+7. Em **Authentication > URL Configuration**, adicione `https://rodrigosinistro.github.io/custos-impressao-3d/?invite=1` às URLs de redirecionamento permitidas.
+8. Publique `supabase/functions/invite-user` como Edge Function autenticada do Supabase quando estiver vindo de uma versão anterior à v1.2.1.
+9. Nas Configurações do sistema, confirme a impressora e o material usados pelo Orçamento Fácil.
+10. Suba os arquivos para o repositório e publique pelo GitHub Pages.
 
 ## Observações de uso
 

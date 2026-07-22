@@ -115,9 +115,8 @@ export function buildQuoteShareText(quote) {
     '',
     `Valor: ${quote.finalPriceFormatted} `,
     '',
-    'Conheça mais do nosso trabalho no nosso site e Instagram: ',
-    `Nossa Loja: ${storeUrl}`,
-    `Instagram: ${instagramHandle}`,
+    'Conheça mais do nosso trabalho no nosso Instagram: ',
+    `Instagram: ${instagramHandle} (https://www.instagram.com/perfeitos.presentes?igsh=cjlicW11cmM5eTNh)`,
     '',
     'Se quiser confirmar o pedido ou tirar qualquer dúvida, é só me chamar.',
   ];

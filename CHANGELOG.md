@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.3
+- Atualizada somente a apresentação do Instagram na mensagem compartilhada dos orçamentos.
+- Removidas da mensagem as referências ao site e à loja.
+- Adicionado o link direto do Instagram ao lado de `@perfeitos.presentes`.
+- Nenhuma alteração no banco de dados ou na Edge Function é necessária.
+
 ## v1.2.2
 - Adicionados os campos **Link do Projeto** e **Observações** ao formulário do Orçamento Fácil.
 - O link e as observações são salvos, exibidos no histórico e restaurados durante a edição.
