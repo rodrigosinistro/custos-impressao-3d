@@ -1,6 +1,6 @@
 # Custos de Impressão 3D — Perfeitos Presentes
 
-**Versão atual:** `v1.2.3`
+**Versão atual:** `v1.2.4`
 
 Sistema web estático para calcular custos e orçamentos de impressão 3D, com banco real no Supabase, autenticação, RLS e publicação pelo GitHub Pages.
 
@@ -20,6 +20,9 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Impressora e material padrão do Orçamento Fácil definidos pelo administrador nas Configurações.
 - Orçamentistas podem criar, editar, salvar, compartilhar e enviar orçamentos fáceis para a produção.
 - Orçamentistas visualizam a fila de produção em modo consulta, sem editar itens ou alterar status.
+- Tempo de impressão com valor decimal e seletor **h / min**, nos dois orçamentos e na produção avulsa; aceita ponto ou vírgula.
+- Exibição de tempo no padrão **2.2 h** ou **51 min**.
+- Observações do orçamento e da produção visíveis na fila e no histórico, inclusive para Orçamentistas.
 - Cadastro e gerenciamento de clientes, impressoras e materiais.
 - Cálculo de orçamento com custo de material, energia, depreciação, manutenção, falha, embalagem, frete, impostos, taxa de cartão e margem.
 - Mão de obra e pintura calculadas automaticamente como **10% do valor calculado**, antes do arredondamento.
@@ -43,7 +46,7 @@ Sistema web estático para calcular custos e orçamentos de impressão 3D, com b
 - Para usar a `v1.2.0`, execute também `supabase/migrations/v1.2.0-easy-quotes-and-users.sql` e publique a Edge Function `invite-user`.
 - Para atualizar para a `v1.2.1`, não há nova migração SQL; publique novamente a Edge Function `invite-user`.
 - Para usar a `v1.2.2`, execute também `supabase/migrations/v1.2.2-easy-quote-editing.sql`; a Edge Function não mudou em relação à v1.2.1.
-- Para atualizar da `v1.2.2` para a `v1.2.3`, basta publicar os arquivos; não há nova migração SQL nem alteração na Edge Function.
+- Para atualizar da `v1.2.2` ou `v1.2.3` para a `v1.2.4`, basta publicar os arquivos; não há nova migração SQL nem alteração na Edge Function.
 
 ## Configuração
 
@@ -61,7 +64,7 @@ window.APP_CONFIG = {
 
 ## Como publicar
 
-1. **Atualizando a v1.2.2:** envie os arquivos da v1.2.3. Não é necessário executar SQL nem republicar a Edge Function.
+1. **Atualizando a v1.2.2 ou v1.2.3:** envie os arquivos da v1.2.4. Não é necessário executar SQL nem republicar a Edge Function.
 2. **Atualizando a v1.2.1:** execute `supabase/migrations/v1.2.2-easy-quote-editing.sql` no SQL Editor e envie os arquivos atuais. Não é necessário republicar a Edge Function.
 3. **Atualizando a v1.2.0:** republique a Edge Function `invite-user`, execute a migração da v1.2.2 e envie os arquivos atuais.
 4. **Atualizando a v1.1.14:** execute, na ordem, `v1.2.0-easy-quotes-and-users.sql` e `v1.2.2-easy-quote-editing.sql`.
@@ -71,6 +74,16 @@ window.APP_CONFIG = {
 8. Publique `supabase/functions/invite-user` como Edge Function autenticada do Supabase quando estiver vindo de uma versão anterior à v1.2.1.
 9. Nas Configurações do sistema, confirme a impressora e o material usados pelo Orçamento Fácil.
 10. Suba os arquivos para o repositório e publique pelo GitHub Pages.
+
+## Tempo de impressão e observações
+
+- Digite o valor e escolha a unidade mostrada no perfil de impressão: **2.2 + h** ou **51 + min**. Também é possível digitar **2,2**.
+- **2.2 h = 132 minutos = 2 h 12 min**. Horas decimais não significam horas e minutos separados por ponto.
+- Valores a partir de 60 minutos aparecem nas listas em horas, com até uma casa decimal; abaixo disso, aparecem em minutos. Esse arredondamento é apenas visual.
+- O cálculo e o banco continuam usando minutos inteiros. Entradas com frações de minuto são arredondadas para o minuto mais próximo.
+- Na edição, um tempo antigo que não pode ser representado exatamente em décimos de hora (por exemplo, 125 minutos) permanece em **min** para preservar o valor original.
+- As observações copiadas do orçamento e as observações de produção aparecem na fila e no histórico. Ao editar o item, o administrador pode consultar as observações do orçamento e alterar as de produção.
+- O item de produção mantém as observações existentes no momento do envio. Editar posteriormente o orçamento não altera automaticamente o item já enviado.
 
 ## Observações de uso
 

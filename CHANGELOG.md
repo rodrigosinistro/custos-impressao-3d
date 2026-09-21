@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.4
+- Tempo de impressão com valor decimal e seletor **h / min** no Orçamento Fácil, no Orçamento Completo e na Produção avulsa; aceita ponto ou vírgula.
+- Conversão automática para minutos no cálculo e na gravação: **2.2 h = 132 min**.
+- Listas passam a mostrar o tempo no padrão **2.2 h** ou **51 min**, sem alterar os minutos salvos nem a fórmula de precificação.
+- Edição preserva tempos antigos que não cabem exatamente em décimos de hora.
+- Observações do orçamento e observações de produção passam a aparecer na fila e no histórico para Administradores e Orçamentistas.
+- Observações do orçamento ficam disponíveis para consulta no formulário de edição da produção.
+- Nenhuma migração SQL ou republicação da Edge Function é necessária.
+
 ## v1.2.3
 - Atualizada somente a apresentação do Instagram na mensagem compartilhada dos orçamentos.
 - Removidas da mensagem as referências ao site e à loja.

@@ -8,7 +8,9 @@ import { settingsRepository } from '../../data/repositories/settingsRepository.j
 import { calculateQuote, buildQuoteShareText } from '../../domain/services/quoteCalculator.js';
 import { formatCurrency, formatDateTime, formatMinutes } from '../../core/utils/format.js';
 import { qs, on, escapeHtml } from '../../core/utils/dom.js';
-import { toNumber, toInt } from '../../core/utils/parse.js';
+import { toNumber } from '../../core/utils/parse.js';
+import { readPrintTimeMinutes } from '../../core/utils/printTime.js';
+import { renderPrintTimeField, setPrintTimeField, attachPrintTimeField } from '../../core/components/printTimeField.js';
 
 function buildSelectOptions(items, placeholder, mapper) {
   return [`<option value="">${placeholder}</option>`]
@@ -126,7 +128,7 @@ export async function renderQuotesView() {
 
           <div class="form-grid-3">
             <div class="field"><label>Peso (g)</label><input name="weightG" inputmode="decimal" value="100" /></div>
-            <div class="field"><label>Tempo de impressão (min)</label><input name="printTimeMinutes" inputmode="numeric" value="180" /></div>
+            ${renderPrintTimeField({ id: 'quotePrintTime' })}
             <div class="field"><label>Energia (R$/kWh)</label><input name="energyCostKwh" inputmode="decimal" value="${settings.energy_cost_kwh}" /></div>
           </div>
 
@@ -213,6 +215,8 @@ export async function renderQuotesView() {
 
 export async function attachQuotesEvents(refresh) {
   const form = qs('#quoteForm');
+  if (!form) return;
+  attachPrintTimeField(form);
   const previewBox = qs('#quotePreview');
   const feedback = qs('#quoteFeedback');
   const previewButton = qs('#previewQuoteButton');
@@ -232,7 +236,7 @@ export async function attachQuotesEvents(refresh) {
     form.reset();
     setFormValue(form, 'id', '');
     setFormValue(form, 'weightG', '100');
-    setFormValue(form, 'printTimeMinutes', '180');
+    setPrintTimeField(form, 180);
     setFormValue(form, 'shippingCost', '0');
     setFormValue(form, 'discountAmount', '0');
     cancelEditButton.hidden = true;
@@ -252,7 +256,7 @@ export async function attachQuotesEvents(refresh) {
     setFormValue(form, 'printerId', quote.printer_id || '');
     setFormValue(form, 'materialId', quote.material_id || '');
     setFormValue(form, 'weightG', quote.weight_g ?? '');
-    setFormValue(form, 'printTimeMinutes', quote.print_time_minutes ?? '');
+    setPrintTimeField(form, quote.print_time_minutes);
     setFormValue(form, 'energyCostKwh', quote.energy_cost_kwh ?? '');
     setFormValue(form, 'failureRate', quote.failure_rate ?? '');
     setFormValue(form, 'packagingCost', quote.packaging_cost ?? '');
@@ -281,7 +285,7 @@ export async function attachQuotesEvents(refresh) {
 
     const result = calculateQuote({
       weightG: toNumber(formData.get('weightG')),
-      printTimeMinutes: toInt(formData.get('printTimeMinutes')),
+      printTimeMinutes: readPrintTimeMinutes(formData),
       powerWatts: Number(printer.power_watts || 0),
       purchaseCost: Number(printer.purchase_cost || 0),
       usefulLifeHours: Number(printer.useful_life_hours || 0),
@@ -305,10 +309,12 @@ export async function attachQuotesEvents(refresh) {
 
   previewButton?.addEventListener('click', updatePreview);
   form?.addEventListener('input', () => updatePreview());
+  form?.addEventListener('change', () => updatePreview());
   cancelEditButton?.addEventListener('click', () => resetFormState());
 
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!form.reportValidity()) return;
     const payload = updatePreview();
     if (!payload) return;
     const client = clients.find((item) => item.id === payload.formData.get('clientId')) || {};
@@ -327,7 +333,7 @@ export async function attachQuotesEvents(refresh) {
         material_id: payload.material?.id || null,
         material_name: payload.material?.name || '',
         weight_g: toNumber(payload.formData.get('weightG')),
-        print_time_minutes: toInt(payload.formData.get('printTimeMinutes')),
+        print_time_minutes: readPrintTimeMinutes(payload.formData),
         energy_cost_kwh: toNumber(payload.formData.get('energyCostKwh')),
         failure_rate: toNumber(payload.formData.get('failureRate')),
         labor_cost: payload.result.laborCost,

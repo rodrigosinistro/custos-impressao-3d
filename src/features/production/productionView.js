@@ -3,6 +3,8 @@ import { authService } from '../../domain/services/authService.js';
 import { formatCurrency, formatDateTime, formatMinutes } from '../../core/utils/format.js';
 import { qs, on, escapeHtml } from '../../core/utils/dom.js';
 import { toInt, toNumber } from '../../core/utils/parse.js';
+import { readPrintTimeMinutes } from '../../core/utils/printTime.js';
+import { renderPrintTimeField, setPrintTimeField, attachPrintTimeField } from '../../core/components/printTimeField.js';
 
 const STATUS_OPTIONS = [
   { value: 'queued', label: 'Na fila' },
@@ -88,6 +90,16 @@ function renderNextAction(item) {
   return '';
 }
 
+function renderProductionNotes(item) {
+  const quoteNotes = String(item.notes || '').trim();
+  const productionNotes = String(item.production_notes || '').trim();
+  if (!quoteNotes && !productionNotes) return '-';
+  return `<div class="production-notes">
+    ${quoteNotes ? `<div><div class="small-text">${item.quote_id ? 'Orçamento' : 'Observação'}</div><div class="production-note-text">${escapeHtml(quoteNotes)}</div></div>` : ''}
+    ${productionNotes ? `<div><div class="small-text">Produção</div><div class="production-note-text">${escapeHtml(productionNotes)}</div></div>` : ''}
+  </div>`;
+}
+
 function renderProductionRows(items, canManage = true) {
   return items.map((item, index) => `
     <tr class="${isOverdue(item) ? 'row-overdue' : ''}">
@@ -97,6 +109,7 @@ function renderProductionRows(items, canManage = true) {
         <div class="small-text">Qtd.: ${Number(item.quantity || 1)} • Material: ${escapeHtml(item.material_name || '-')}</div>
       </td>
       <td>${escapeHtml(item.client_name || '-')}</td>
+      <td>${renderProductionNotes(item)}</td>
       <td><span class="badge status-badge ${statusClass(item.status)}">${statusLabel(item.status)}</span></td>
       <td>${formatDateTime(item.queued_at || item.created_at)}</td>
       <td>${escapeHtml(deadlineText(item))}</td>
@@ -149,7 +162,7 @@ export async function renderProductionView() {
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Ordem</th><th>Peça</th><th>Cliente</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Tempo</th><th>Valor</th>${canManage ? '<th></th>' : ''}</tr>
+                <tr><th>Ordem</th><th>Peça</th><th>Cliente</th><th>Observações</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Tempo</th><th>Valor</th>${canManage ? '<th></th>' : ''}</tr>
               </thead>
               <tbody>${renderProductionRows(activeItems, canManage)}</tbody>
             </table>
@@ -175,11 +188,15 @@ export async function renderProductionView() {
           </div>
           <div class="form-grid">
             <div class="field"><label>Peso (g)</label><input name="weightG" inputmode="decimal" value="0" /></div>
-            <div class="field"><label>Tempo de impressão (min)</label><input name="printTimeMinutes" inputmode="numeric" value="0" /></div>
+            ${renderPrintTimeField({ id: 'productionPrintTime', minutes: 0 })}
           </div>
           <div class="form-grid">
             <div class="field"><label>Valor final (R$)</label><input name="finalPrice" inputmode="decimal" value="0" /></div>
             <div class="field"><label>Prazo</label><input name="dueDate" type="date" value="${addDaysDateString(7)}" max="${addDaysDateString(7)}" /></div>
+          </div>
+          <div class="field" id="productionQuoteNotesField" hidden>
+            <label for="productionQuoteNotes">Observações do orçamento</label>
+            <textarea id="productionQuoteNotes" name="quoteNotes" readonly></textarea>
           </div>
           <div class="field"><label>Observações de produção</label><textarea name="productionNotes" placeholder="Cor, acabamento, prioridade, detalhes de entrega..."></textarea></div>
           <div id="productionFeedback"></div>
@@ -196,15 +213,17 @@ export async function renderProductionView() {
       ${items.filter((item) => item.status === 'delivered' || item.status === 'canceled').length ? `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Peça</th><th>Cliente</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Valor</th>${canManage ? '<th></th>' : ''}</tr></thead>
+            <thead><tr><th>Peça</th><th>Cliente</th><th>Observações</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Tempo</th><th>Valor</th>${canManage ? '<th></th>' : ''}</tr></thead>
             <tbody>
               ${items.filter((item) => item.status === 'delivered' || item.status === 'canceled').map((item) => `
                 <tr>
                   <td>${escapeHtml(item.piece_name)}</td>
                   <td>${escapeHtml(item.client_name || '-')}</td>
+                  <td>${renderProductionNotes(item)}</td>
                   <td><span class="badge status-badge ${statusClass(item.status)}">${statusLabel(item.status)}</span></td>
                   <td>${formatDateTime(item.queued_at || item.created_at)}</td>
                   <td>${formatDateOnly(item.due_date)}</td>
+                  <td>${formatMinutes(item.print_time_minutes)}</td>
                   <td>${formatCurrency(item.final_price)}</td>
                   ${canManage ? `<td><button class="btn btn-secondary" data-edit-production="${item.id}">Editar</button></td>` : ''}
                 </tr>
@@ -220,10 +239,13 @@ export async function renderProductionView() {
 export async function attachProductionEvents(refresh) {
   if (!authService.isAdmin()) return;
   const form = qs('#productionForm');
+  if (!form) return;
+  attachPrintTimeField(form);
   const feedback = qs('#productionFeedback');
   const formTitle = qs('#productionFormTitle');
   const saveButton = qs('#saveProductionButton');
   const cancelButton = qs('#cancelEditProductionButton');
+  const quoteNotesField = qs('#productionQuoteNotesField');
 
   const resetForm = () => {
     if (!form) return;
@@ -232,9 +254,10 @@ export async function attachProductionEvents(refresh) {
     setFormValue(form, 'quantity', '1');
     setFormValue(form, 'status', 'queued');
     setFormValue(form, 'weightG', '0');
-    setFormValue(form, 'printTimeMinutes', '0');
+    setPrintTimeField(form, 0);
     setFormValue(form, 'finalPrice', '0');
     setFormValue(form, 'dueDate', addDaysDateString(7));
+    quoteNotesField.hidden = true;
     feedback.innerHTML = '';
     formTitle.textContent = 'Produção avulsa';
     saveButton.textContent = 'Salvar produção';
@@ -251,10 +274,12 @@ export async function attachProductionEvents(refresh) {
     setFormValue(form, 'materialName', item.material_name || '');
     setFormValue(form, 'printerName', item.printer_name || '');
     setFormValue(form, 'weightG', item.weight_g ?? 0);
-    setFormValue(form, 'printTimeMinutes', item.print_time_minutes ?? 0);
+    setPrintTimeField(form, item.print_time_minutes);
     setFormValue(form, 'finalPrice', item.final_price ?? 0);
     setFormValue(form, 'dueDate', String(item.due_date || '').slice(0, 10) || addDaysDateString(7));
     setFormValue(form, 'productionNotes', item.production_notes || '');
+    setFormValue(form, 'quoteNotes', item.notes || '');
+    quoteNotesField.hidden = !item.quote_id && !item.notes;
     feedback.innerHTML = '<div class="notice">Você está editando um item de produção.</div>';
     formTitle.textContent = `Editando produção: ${item.piece_name}`;
     saveButton.textContent = 'Salvar alterações';
@@ -265,6 +290,7 @@ export async function attachProductionEvents(refresh) {
 
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!form.reportValidity()) return;
     const formData = new FormData(form);
     const productionId = String(formData.get('id') || '').trim();
     const maxDueDate = addDaysDateString(7);
@@ -281,7 +307,7 @@ export async function attachProductionEvents(refresh) {
         material_name: String(formData.get('materialName') || '').trim(),
         printer_name: String(formData.get('printerName') || '').trim(),
         weight_g: toNumber(formData.get('weightG')),
-        print_time_minutes: toInt(formData.get('printTimeMinutes')),
+        print_time_minutes: readPrintTimeMinutes(formData),
         final_price: toNumber(formData.get('finalPrice')),
         due_date: dueDate,
         production_notes: String(formData.get('productionNotes') || '').trim(),

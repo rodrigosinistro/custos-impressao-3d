@@ -5,6 +5,16 @@
 - GitHub: https://github.com/rodrigosinistro/custos-impressao-3d
 - Pages: https://rodrigosinistro.github.io/custos-impressao-3d/
 
+## Atualização da v1.2.3 (ou v1.2.2) para v1.2.4
+
+Esta versão adiciona entrada de tempo em horas decimais ou minutos e mostra as observações na Produção. O banco continua usando as mesmas colunas. **Não é necessário executar SQL nem republicar a Edge Function.**
+
+1. Extraia o pacote `custos-impressao-3d-v1.2.4.zip`.
+2. Envie o conteúdo da pasta `custos-impressao-3d` para a raiz do repositório, na branch `main`.
+3. Aguarde o GitHub Pages publicar e pressione `Ctrl + F5` ao abrir o sistema.
+4. Use o campo de tempo com a unidade correspondente: `2.2` em `h` ou `51` em `min`.
+5. Na Produção, consulte a coluna **Observações**. O administrador também pode consultar as observações do orçamento ao editar o item.
+
 ## Atualização da v1.2.2 para v1.2.3
 
 Esta atualização altera somente o texto compartilhado dos orçamentos. Não é necessário executar SQL nem republicar a Edge Function.
@@ -82,7 +92,7 @@ Depois configure a URL de redirecionamento, publique a Edge Function e envie os 
 
 ## Edge Function
 
-A função `invite-user`, atualizada na v1.2.1 e mantida sem alterações nas versões v1.2.2 e v1.2.3, executa três operações protegidas:
+A função `invite-user`, atualizada na v1.2.1 e mantida sem alterações nas versões v1.2.2, v1.2.3 e v1.2.4, executa três operações protegidas:
 
 - convidar um Orçamentista;
 - enviar um link para definição de nova senha;

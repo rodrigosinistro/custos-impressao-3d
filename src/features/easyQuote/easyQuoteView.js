@@ -9,7 +9,9 @@ import { authService } from '../../domain/services/authService.js';
 import { calculateQuote, buildQuoteShareText } from '../../domain/services/quoteCalculator.js';
 import { formatCurrency, formatDateTime, formatMinutes } from '../../core/utils/format.js';
 import { qs, on, escapeHtml } from '../../core/utils/dom.js';
-import { toInt, toNumber } from '../../core/utils/parse.js';
+import { toNumber } from '../../core/utils/parse.js';
+import { readPrintTimeMinutes } from '../../core/utils/printTime.js';
+import { renderPrintTimeField, setPrintTimeField, attachPrintTimeField } from '../../core/components/printTimeField.js';
 
 function renderEasyPreview(result) {
   return `
@@ -85,7 +87,7 @@ function buildQuotePayload({ formData, client, settings, printer, material, resu
     material_id: material.id,
     material_name: material.name || '',
     weight_g: toNumber(formData.get('weightG')),
-    print_time_minutes: toInt(formData.get('printTimeMinutes')),
+    print_time_minutes: readPrintTimeMinutes(formData),
     energy_cost_kwh: Number(settings.energy_cost_kwh || 0),
     failure_rate: Number(settings.default_failure_rate || 0),
     labor_cost: result.laborCost,
@@ -200,7 +202,7 @@ export async function renderEasyQuoteView() {
           </div>
           <div class="form-grid">
             <div class="field"><label>Peso (g)</label><input name="weightG" inputmode="decimal" min="0.01" value="100" required /></div>
-            <div class="field"><label>Tempo de produção (min)</label><input name="printTimeMinutes" inputmode="numeric" min="1" value="180" required /></div>
+            ${renderPrintTimeField({ id: 'easyQuotePrintTime', label: 'Tempo de impressão' })}
           </div>
           <div class="notice">
             Cálculo configurado com <b>${escapeHtml(printer.name)}</b> e <b>${escapeHtml(material.name)}</b>.
@@ -262,6 +264,7 @@ export async function renderEasyQuoteView() {
 export async function attachEasyQuoteEvents(refresh) {
   const form = qs('#easyQuoteForm');
   if (!form) return;
+  attachPrintTimeField(form, { minMinutes: 1 });
 
   const preview = qs('#easyQuotePreview');
   const feedback = qs('#easyQuoteFeedback');
@@ -286,7 +289,7 @@ export async function attachEasyQuoteEvents(refresh) {
     const formData = new FormData(form);
     const result = calculateEasyQuote({
       weightG: toNumber(formData.get('weightG')),
-      printTimeMinutes: toInt(formData.get('printTimeMinutes')),
+      printTimeMinutes: readPrintTimeMinutes(formData),
       settings,
       printer,
       material,
@@ -299,7 +302,7 @@ export async function attachEasyQuoteEvents(refresh) {
     form.reset();
     setFormValue(form, 'id', '');
     setFormValue(form, 'weightG', '100');
-    setFormValue(form, 'printTimeMinutes', '180');
+    setPrintTimeField(form, 180);
     cancelEditButton.hidden = true;
     produceButton.hidden = false;
     formTitle.textContent = 'Novo orçamento fácil';
@@ -317,7 +320,7 @@ export async function attachEasyQuoteEvents(refresh) {
     setFormValue(form, 'projectLink', quote.project_link || '');
     setFormValue(form, 'notes', quote.notes || '');
     setFormValue(form, 'weightG', quote.weight_g ?? '');
-    setFormValue(form, 'printTimeMinutes', quote.print_time_minutes ?? '');
+    setPrintTimeField(form, quote.print_time_minutes);
 
     cancelEditButton.hidden = false;
     produceButton.hidden = wasSentToProduction;
@@ -333,9 +336,11 @@ export async function attachEasyQuoteEvents(refresh) {
   };
 
   form.addEventListener('input', updatePreview);
+  form.addEventListener('change', updatePreview);
   cancelEditButton.addEventListener('click', resetFormState);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!form.reportValidity()) return;
     const { formData, result } = updatePreview();
     const quoteId = String(formData.get('id') || '').trim();
     const clientName = String(formData.get('clientName') || '').trim();
@@ -343,7 +348,7 @@ export async function attachEasyQuoteEvents(refresh) {
     const action = event.submitter?.dataset.easyAction || 'save';
     const buttons = form.querySelectorAll('button[type="submit"]');
 
-    if (toNumber(formData.get('weightG')) <= 0 || toInt(formData.get('printTimeMinutes')) <= 0) {
+    if (toNumber(formData.get('weightG')) <= 0 || !(readPrintTimeMinutes(formData) > 0)) {
       feedback.innerHTML = '<div class="alert">Informe um peso e um tempo de produção maiores que zero.</div>';
       return;
     }

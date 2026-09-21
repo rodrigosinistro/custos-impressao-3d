@@ -343,6 +343,34 @@ form {
   font-size: 0.93rem;
 }
 
+.print-time-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 8px;
+  align-items: start;
+}
+
+.form-grid:has(.print-time-controls),
+.form-grid-3:has(.print-time-controls) {
+  align-items: start;
+}
+
+#productionQuoteNotesField[hidden] {
+  display: none;
+}
+
+.production-notes {
+  display: grid;
+  min-width: 160px;
+  max-width: 320px;
+  gap: 10px;
+}
+
+.production-note-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .field input,
 .field select,
 .field textarea {
@@ -891,6 +919,11 @@ th {
 }
 
 @media (max-width: 720px) {
+  .production-notes {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .table-wrap {
     overflow: visible;
   }

@@ -15,12 +15,12 @@ export function formatDateTime(value) {
 }
 
 export function formatMinutes(totalMinutes) {
-  const minutes = Number(totalMinutes || 0);
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (!hours) return `${rest} min`;
-  if (!rest) return `${hours}h`;
-  return `${hours}h ${rest}min`;
+  const numeric = Number(totalMinutes || 0);
+  const minutes = Number.isFinite(numeric) ? Math.max(0, Math.round(numeric)) : 0;
+  if (minutes < 60) return `${minutes} min`;
+  // Mesmo padrão compacto dos perfis de impressão: 2.2 h ou 51 min.
+  // O arredondamento é apenas visual; os cálculos usam os minutos originais.
+  return `${Number((minutes / 60).toFixed(1))} h`;
 }
 
 export function formatPhone(value) {
